@@ -38,19 +38,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: parsed.error.message }, { status: 400 });
   }
 
-  const [updated] = await db
+  // MySQL has no RETURNING — update then re-select with join
+  await db
     .update(trackedItemsTable)
     .set(parsed.data)
-    .where(eq(trackedItemsTable.id, numId))
-    .returning();
+    .where(eq(trackedItemsTable.id, numId));
 
-  const rows = await db
+  const [row] = await db
     .select()
     .from(trackedItemsTable)
     .innerJoin(productsTable, eq(trackedItemsTable.productId, productsTable.id))
-    .where(eq(trackedItemsTable.id, updated.id));
+    .where(eq(trackedItemsTable.id, numId));
 
-  const row = rows[0];
   return NextResponse.json({
     ...row.tracked_items,
     product: { ...row.products, price: Number(row.products.price) },

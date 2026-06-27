@@ -75,19 +75,19 @@ export default function AdminCatalogView() {
   };
 
   const inputClass =
-    "w-full rounded border border-ink-200 bg-white px-3 py-1.5 text-sm text-ink-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500";
+    "w-full rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-sm text-ink-900 transition-all focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-ink-600 dark:bg-ink-800 dark:text-ink-100 dark:focus:border-brand-400";
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-ink-900">إدارة المنتجات</h1>
-          <p className="mt-1 text-sm text-ink-500">إضافة وتحديث وحذف منتجات الكتالوج</p>
+          <h1 className="text-xl font-bold text-ink-900 sm:text-2xl dark:text-ink-100">إدارة المنتجات</h1>
+          <p className="mt-1 text-sm text-ink-500 dark:text-ink-400">إضافة وتحديث وحذف منتجات الكتالوج</p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="flex shrink-0 items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 transition-colors"
+          className="flex shrink-0 items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-brand-700 hover:shadow-md active:scale-[0.97] dark:bg-brand-500 dark:hover:bg-brand-600"
         >
           {showForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
           {showForm ? "إلغاء" : "منتج جديد"}
@@ -96,11 +96,11 @@ export default function AdminCatalogView() {
 
       {/* Add form */}
       {showForm && (
-        <div className="max-w-lg rounded-xl border border-ink-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-4 font-semibold text-ink-900">إضافة منتج جديد</h2>
-          <div className="space-y-3">
+        <div className="max-w-lg rounded-xl border border-ink-200 bg-white p-5 shadow-sm animate-fade-in dark:border-ink-700 dark:bg-ink-800">
+          <h2 className="mb-4 text-base font-semibold text-ink-900 dark:text-ink-100">إضافة منتج جديد</h2>
+          <div className="space-y-4">
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-700">الباركود</label>
+              <label className="mb-1.5 block text-sm font-medium text-ink-900 dark:text-ink-200">الباركود</label>
               <input
                 type="text"
                 value={formData.barcode}
@@ -111,7 +111,7 @@ export default function AdminCatalogView() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-700">الاسم</label>
+              <label className="mb-1.5 block text-sm font-medium text-ink-900 dark:text-ink-200">الاسم</label>
               <input
                 type="text"
                 value={formData.name}
@@ -122,7 +122,7 @@ export default function AdminCatalogView() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-ink-700">السعر (ج.م)</label>
+              <label className="mb-1.5 block text-sm font-medium text-ink-900 dark:text-ink-200">السعر (ج.م)</label>
               <input
                 type="number"
                 step="0.01"
@@ -143,7 +143,7 @@ export default function AdminCatalogView() {
                 !formData.name.trim() ||
                 !formData.price
               }
-              className="w-full rounded-lg bg-brand-600 py-2 text-sm font-semibold text-white hover:bg-brand-700 transition-colors disabled:opacity-50"
+              className="w-full rounded-lg bg-brand-600 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-brand-700 hover:shadow-md active:scale-[0.98] disabled:opacity-50 dark:bg-brand-500 dark:hover:bg-brand-600"
             >
               {createMutation.isPending ? "جاري الإضافة..." : "إضافة المنتج"}
             </button>
@@ -161,34 +161,32 @@ export default function AdminCatalogView() {
           placeholder="بحث بالاسم أو الباركود..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          className="w-full rounded-lg border border-ink-200 bg-white py-2.5 pe-10 ps-4 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+          className="w-full rounded-lg border border-ink-200 bg-white py-2.5 pe-10 ps-4 text-sm text-ink-900 placeholder:text-ink-400 transition-all focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-ink-600 dark:bg-ink-800 dark:text-ink-100 dark:placeholder:text-ink-500 dark:focus:border-brand-400"
         />
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border border-ink-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-ink-200 bg-white shadow-sm dark:border-ink-700 dark:bg-ink-800">
         {isLoading ? (
-          <div className="flex items-center justify-center py-12 text-sm text-ink-400">
-            جاري التحميل...
-          </div>
+          <div className="flex items-center justify-center py-12 text-sm text-ink-400 dark:text-ink-500">جاري التحميل...</div>
         ) : products.length === 0 ? (
-          <div className="py-12 text-center text-sm text-ink-500">
+          <div className="py-12 text-center text-sm text-ink-500 dark:text-ink-400">
             {input ? "لا توجد نتائج" : "لا توجد منتجات بعد"}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-right text-sm">
-              <thead className="border-b border-ink-200 bg-ink-50">
-                <tr>
-                  <th className="px-4 py-3 font-semibold text-ink-700">الاسم</th>
-                  <th className="px-4 py-3 font-semibold text-ink-700">الباركود</th>
-                  <th className="px-4 py-3 font-semibold text-ink-700">السعر (ج.م)</th>
+              <thead>
+                <tr className="border-b border-ink-200 bg-ink-50 dark:border-ink-700 dark:bg-ink-800/50">
+                  <th className="px-4 py-3 font-semibold text-ink-700 dark:text-ink-300">الاسم</th>
+                  <th className="px-4 py-3 font-semibold text-ink-700 dark:text-ink-300">الباركود</th>
+                  <th className="px-4 py-3 font-semibold text-ink-700 dark:text-ink-300">السعر (ج.م)</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-ink-100">
+              <tbody className="divide-y divide-ink-100 dark:divide-ink-700">
                 {products.map((p) => (
-                  <tr key={p.id} className="group hover:bg-ink-50 transition-colors">
+                  <tr key={p.id} className="group transition-colors hover:bg-ink-50/80 even:bg-ink-50/30 dark:hover:bg-ink-700/50 dark:even:bg-ink-700/30">
                     {editingId === p.id ? (
                       <>
                         <td className="px-4 py-2">
@@ -219,14 +217,14 @@ export default function AdminCatalogView() {
                             <button
                               onClick={() => updateMutation.mutate({ id: p.id, data: editData })}
                               disabled={updateMutation.isPending}
-                              className="rounded p-1.5 text-brand-600 hover:bg-brand-50"
+                              className="rounded-lg p-1.5 text-brand-600 transition-all hover:bg-brand-50 hover:text-brand-700 dark:text-brand-400 dark:hover:bg-brand-900/50 dark:hover:text-brand-300"
                               title="حفظ"
                             >
                               <Check className="h-4 w-4" />
                             </button>
                             <button
                               onClick={() => setEditingId(null)}
-                              className="rounded p-1.5 text-ink-500 hover:bg-ink-100"
+                              className="rounded-lg p-1.5 text-ink-500 transition-all hover:bg-ink-100 dark:text-ink-400 dark:hover:bg-ink-700"
                               title="إلغاء"
                             >
                               <X className="h-4 w-4" />
@@ -236,14 +234,14 @@ export default function AdminCatalogView() {
                       </>
                     ) : (
                       <>
-                        <td className="px-4 py-3 font-medium text-ink-900">{p.name}</td>
-                        <td className="px-4 py-3 font-mono text-ink-700">{p.barcode}</td>
-                        <td className="px-4 py-3 text-ink-700">{Number(p.price).toFixed(2)}</td>
+                        <td className="px-4 py-3 font-medium text-ink-900 dark:text-ink-100">{p.name}</td>
+                        <td className="px-4 py-3 font-mono text-ink-700 dark:text-ink-300">{p.barcode}</td>
+                        <td className="px-4 py-3 font-semibold text-ink-700 dark:text-ink-300">{Number(p.price).toFixed(2)}</td>
                         <td className="px-4 py-3">
-                          <div className="invisible flex items-center gap-1 group-hover:visible">
+                          <div className="invisible flex items-center gap-1 opacity-0 transition-all group-hover:visible group-hover:opacity-100">
                             <button
                               onClick={() => startEdit(p)}
-                              className="rounded p-1.5 text-ink-400 hover:bg-brand-50 hover:text-brand-600 transition-colors"
+                              className="rounded-lg p-1.5 text-ink-400 transition-all hover:bg-brand-50 hover:text-brand-600 dark:text-ink-500 dark:hover:bg-brand-900/50 dark:hover:text-brand-400"
                               title="تعديل"
                             >
                               <Pencil className="h-4 w-4" />
@@ -253,7 +251,7 @@ export default function AdminCatalogView() {
                                 if (confirm(`حذف "${p.name}"؟`)) deleteMutation.mutate(p.id);
                               }}
                               disabled={deleteMutation.isPending}
-                              className="rounded p-1.5 text-ink-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                              className="rounded-lg p-1.5 text-ink-400 transition-all hover:bg-red-50 hover:text-red-600 dark:text-ink-500 dark:hover:bg-red-950 dark:hover:text-red-400"
                               title="حذف"
                             >
                               <Trash2 className="h-4 w-4" />

@@ -16,6 +16,27 @@
   --muted:       229 236 235;
   --muted-fg:    90 111 108;
   --radius:      0.75rem;
+
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03);
+  --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-dropdown: 0 8px 24px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04);
+}
+
+.dark {
+  --background: 19 23 22;
+  --foreground: 229 236 235;
+  --card:        28 34 33;
+  --border:      50 62 60;
+  --input:       28 34 33;
+  --primary:     39 172 156;
+  --primary-fg:  19 23 22;
+  --muted:       36 44 43;
+  --muted-fg:    145 162 159;
+  --radius:      0.75rem;
+
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.15);
+  --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.3), 0 2px 4px rgba(0,0,0,0.2);
+  --shadow-dropdown: 0 8px 24px rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.2);
 }
 
 /* ── Base ───────────────────────────────────────────────────── */
@@ -39,8 +60,30 @@ body {
   color: rgb(var(--foreground));
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Prevent horizontal scroll on mobile */
   overflow-x: hidden;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* ── Selection colour ────────────────────────────────────────── */
+::selection {
+  background-color: rgb(var(--primary) / 0.15);
+  color: rgb(var(--primary));
+}
+
+/* ── Custom scrollbar (Webkit) ───────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--border) / 0.5);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--border) / 0.8);
 }
 
 /* ── Touch targets: minimum 44 × 44 px (WCAG 2.5.5) ─────────── */
@@ -61,9 +104,13 @@ a,
 
 /* ── Status badge colours ───────────────────────────────────── */
 .badge-expired { background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; }
+.dark .badge-expired { background: #450a0a; color: #fca5a5; border-color: #991b1b; }
 .badge-soon    { background: #fff7ed; color: #ea580c; border: 1px solid #fdba74; }
+.dark .badge-soon    { background: #431407; color: #fdba74; border-color: #9a3412; }
 .badge-warning { background: #fffbeb; color: #b45309; border: 1px solid #fcd34d; }
+.dark .badge-warning { background: #422006; color: #fcd34d; border-color: #92400e; }
 .badge-ok      { background: #f0faf8; color: #146257; border: 1px solid #a4e1d6; }
+.dark .badge-ok      { background: #0d3834; color: #6ccabd; border-color: #115249; }
 
 /* ── Progress bar track ─────────────────────────────────────── */
 .progress-track {
@@ -83,4 +130,39 @@ a,
   .bottom-tab-bar {
     padding-bottom: env(safe-area-inset-bottom);
   }
+}
+
+/* ── Slide-up animation for page transitions ────────────────── */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-slide-up {
+  animation: slide-up 0.35s ease-out both;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out both;
+}
+
+/* ── Skeleton shimmer ────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, rgb(var(--muted)) 25%, rgb(var(--background)) 50%, rgb(var(--muted)) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius);
 }

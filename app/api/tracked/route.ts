@@ -60,7 +60,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.message }, { status: 400 });
   }
 
-  const [inserted] = await db
+  // MySQL has no RETURNING — use $returningId() then re-select with join
+  const [{ id: newId }] = await db
     .insert(trackedItemsTable)
     .values({
       clerkUserId: dbUser.clerkUserId,
@@ -69,15 +70,14 @@ export async function POST(req: NextRequest) {
       quantity: parsed.data.quantity,
       notes: parsed.data.notes ?? "",
     })
-    .returning();
+    .$returningId();
 
-  const rows = await db
+  const [row] = await db
     .select()
     .from(trackedItemsTable)
     .innerJoin(productsTable, eq(trackedItemsTable.productId, productsTable.id))
-    .where(eq(trackedItemsTable.id, inserted.id));
+    .where(eq(trackedItemsTable.id, newId));
 
-  const row = rows[0];
   return NextResponse.json(
     { ...row.tracked_items, product: { ...row.products, price: Number(row.products.price) } },
     { status: 201 }

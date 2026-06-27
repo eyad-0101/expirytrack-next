@@ -3,7 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const productsTable = mysqlTable("products", {
-  id:      int("id").primaryKey(),
+  id:      int("id").autoincrement().primaryKey(),
   barcode: varchar("barcode", { length: 64 }).notNull(),
   name:    varchar("name", { length: 255 }).notNull(),
   price:   decimal("price", { precision: 10, scale: 2 }).notNull(),

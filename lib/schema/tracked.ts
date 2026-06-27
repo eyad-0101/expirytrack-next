@@ -4,7 +4,7 @@ import { z } from "zod";
 import { productsTable } from "./products";
 
 export const trackedItemsTable = mysqlTable("tracked_items", {
-  id:          int("id").primaryKey(),
+  id:          int("id").autoincrement().primaryKey(),
   clerkUserId: varchar("clerk_user_id", { length: 255 }),
   productId:   int("product_id")
     .notNull()

@@ -7,7 +7,8 @@ import { z } from "zod";
 const ProductUpdate = z.object({
   barcode: z.string().optional(),
   name: z.string().optional(),
-  price: z.number().optional(),
+  // Accept number from client, store as string for MySQL decimal column
+  price: z.coerce.number().optional().transform((v) => (v !== undefined ? String(v) : undefined)),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -23,11 +24,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: parsed.error.message }, { status: 400 });
   }
 
-  const [updated] = await db
+  await db
     .update(productsTable)
     .set(parsed.data)
+    .where(eq(productsTable.id, numId));
+
+  const [updated] = await db
+    .select()
+    .from(productsTable)
     .where(eq(productsTable.id, numId))
-    .returning();
+    .limit(1);
 
   if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({ ...updated, price: Number(updated.price) });

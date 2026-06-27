@@ -14,17 +14,25 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (result.error) return result.error;
 
   const { id } = await params;
+  const numId = parseInt(id);
+
   const body = await req.json();
   const parsed = UserUpdate.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.message }, { status: 400 });
   }
 
-  const [updated] = await db
+  // MySQL has no RETURNING — update then re-select
+  await db
     .update(usersTable)
     .set(parsed.data)
-    .where(eq(usersTable.id, parseInt(id)))
-    .returning();
+    .where(eq(usersTable.id, numId));
+
+  const [updated] = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.id, numId))
+    .limit(1);
 
   if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(updated);
