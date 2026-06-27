@@ -1,8 +1,19 @@
-import type { Config } from "drizzle-kit";
+import { defineConfig } from "drizzle-kit";
+import { config } from "dotenv";
 
-export default {
-  schema: ["./lib/schema/products.ts", "./lib/schema/tracked.ts", "./lib/schema/users.ts"],
+// Manually load your environment variables first!
+config({ path: ".env.local" }); // Or ".env.local" if that is what you use
+
+export default defineConfig({
+  dialect: "mysql",
+  schema: [
+    "./lib/schema/products.ts",
+    "./lib/schema/tracked.ts",
+    "./lib/schema/users.ts",
+  ],
+
   out: "./drizzle",
-  dialect: "postgresql",
-  dbCredentials: { url: process.env.DATABASE_URL! },
-} satisfies Config;
+  dbCredentials: {
+    url: process.env.DATABASE_URL!, // format: mysql://user:password@host:port/database
+  },
+});

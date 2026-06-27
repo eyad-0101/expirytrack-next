@@ -13,6 +13,9 @@ export type DbUser = {
 /**
  * Call at the top of every API route handler that requires auth.
  * Returns { dbUser } on success or a NextResponse 401/500 on failure.
+ *
+ * NOTE: onConflictDoUpdate is not available in drizzle-orm's mysql2 dialect.
+ * We use a manual select → insert/update pattern instead.
  */
 export async function requireAuth(): Promise<
   { dbUser: DbUser; error?: never } | { dbUser?: never; error: NextResponse }
@@ -22,6 +25,7 @@ export async function requireAuth(): Promise<
     return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
   }
 
+  // 1. Fast path — already in DB by clerkUserId
   const existing = await db
     .select()
     .from(usersTable)
@@ -30,16 +34,17 @@ export async function requireAuth(): Promise<
 
   if (existing[0]) return { dbUser: existing[0] };
 
-  // JIT provision
+  // 2. Resolve email from Clerk
   let email = `${userId}@unknown.com`;
   try {
     const client = await clerkClient();
     const clerkUser = await client.users.getUser(userId);
     email = clerkUser.emailAddresses[0]?.emailAddress ?? email;
   } catch {
-    // fall through
+    // fall through with placeholder email
   }
 
+  // 3. Email already in DB (e.g. created by admin before first sign-in)
   const byEmail = await db
     .select()
     .from(usersTable)
@@ -47,25 +52,37 @@ export async function requireAuth(): Promise<
     .limit(1);
 
   if (byEmail[0]) {
-    const [updated] = await db
+    // MySQL has no RETURNING clause — update, then re-select the row.
+    await db
       .update(usersTable)
       .set({ clerkUserId: userId })
+      .where(eq(usersTable.id, byEmail[0].id));
+
+    const [updated] = await db
+      .select()
+      .from(usersTable)
       .where(eq(usersTable.id, byEmail[0].id))
-      .returning();
+      .limit(1);
+
     return { dbUser: updated };
   }
 
+  // 4. JIT provision — first user becomes admin
+  // db.$count() already returns Promise<number> on its own — don't wrap it in select().
   const count = await db.$count(usersTable);
   const role = count === 0 ? "admin" : "user";
 
-  const [created] = await db
+  // MySQL inserts only give back the inserted id via $returningId(), not the full row.
+  const [{ id: newId }] = await db
     .insert(usersTable)
     .values({ email, clerkUserId: userId, role })
-    .onConflictDoUpdate({
-      target: usersTable.email,
-      set: { clerkUserId: userId },
-    })
-    .returning();
+    .$returningId();
+
+  const [created] = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.id, newId))
+    .limit(1);
 
   return { dbUser: created };
 }

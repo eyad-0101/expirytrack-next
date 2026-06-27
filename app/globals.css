@@ -1,47 +1,86 @@
-@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
+@import "tailwindcss";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
+/* ── Design Tokens ─────────────────────────────────────────── */
 :root {
-  --background: 244 247 246; /* ink-50 */
-  --foreground: 26 31 30;    /* ink-900 */
-  --card: 255 255 255;
-  --card-foreground: 26 31 30;
-  --border: 196 208 206;     /* ink-200 */
-  --input: 244 247 246;
-  --primary: 20 98 87;       /* brand-600 */
-  --primary-foreground: 255 255 255;
-  --muted: 229 236 235;
-  --muted-foreground: 90 111 108;
-  --radius: 0.75rem;
+  --font-sans: "IBM Plex Sans Arabic", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+
+  --background: 244 247 246;
+  --foreground: 26 31 30;
+  --card:        255 255 255;
+  --border:      196 208 206;
+  --input:       244 247 246;
+  --primary:     20 98 87;
+  --primary-fg:  255 255 255;
+  --muted:       229 236 235;
+  --muted-fg:    90 111 108;
+  --radius:      0.75rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: 26 31 30;
-    --foreground: 244 247 246;
-    --card: 45 60 58;
-    --card-foreground: 244 247 246;
-    --border: 75 95 91;
-    --input: 45 60 58;
-    --muted: 90 111 108;
-    --muted-foreground: 229 236 235;
-  }
+/* ── Base ───────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  border-color: rgb(var(--border));
 }
-
-* {
-  /* Avoid shadcn-only utilities; just ensure consistent border color */
-  border-color: rgb(196 208 206);
-}
-
-body {
-  background-color: rgb(244 247 246);
-  color: rgb(26 31 30);
-}
-
 
 html {
   scroll-behavior: smooth;
+  font-family: var(--font-sans);
+  /* Respect device safe areas (notches, home indicators) */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+           env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+body {
+  background-color: rgb(var(--background));
+  color: rgb(var(--foreground));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Prevent horizontal scroll on mobile */
+  overflow-x: hidden;
+}
+
+/* ── Touch targets: minimum 44 × 44 px (WCAG 2.5.5) ─────────── */
+button,
+a,
+[role="button"],
+[role="option"] {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Icon-only buttons inside navigation that are naturally smaller
+   can use the touch-safe override class */
+.touch-safe-sm {
+  min-height: 36px;
+  min-width: 36px;
+}
+
+/* ── Status badge colours ───────────────────────────────────── */
+.badge-expired { background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; }
+.badge-soon    { background: #fff7ed; color: #ea580c; border: 1px solid #fdba74; }
+.badge-warning { background: #fffbeb; color: #b45309; border: 1px solid #fcd34d; }
+.badge-ok      { background: #f0faf8; color: #146257; border: 1px solid #a4e1d6; }
+
+/* ── Progress bar track ─────────────────────────────────────── */
+.progress-track {
+  height: 4px;
+  background: rgb(var(--muted));
+  border-radius: 9999px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.4s ease;
+}
+
+/* ── Bottom tab bar — account for home-indicator safe area ───── */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .bottom-tab-bar {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }

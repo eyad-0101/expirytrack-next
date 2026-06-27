@@ -1,146 +1,274 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Plus, Pencil, Trash2, X, Check, Search } from "lucide-react";
 
-import { createProduct, deleteProduct, listProducts } from "@/lib/api-client";
-import { Button } from "@/components/ui/button";
+import { createProduct, deleteProduct, updateProduct, listProducts, type Product } from "@/lib/api-client";
+
+type EditState = { barcode: string; name: string; price: string };
 
 export default function AdminCatalogView() {
   const qc = useQueryClient();
-  const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ barcode: "", name: "", price: "" });
 
-  const { data: products } = useQuery({
-    queryKey: ["products"],
-    queryFn: () => listProducts({ limit: 1000 }),
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState<EditState>({ barcode: "", name: "", price: "" });
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editData, setEditData] = useState<EditState>({ barcode: "", name: "", price: "" });
+  const [input, setInput] = useState("");
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(input), 300);
+    return () => clearTimeout(t);
+  }, [input]);
+
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ["products", search],
+    queryFn: () => listProducts({ search, limit: 1000 }),
   });
 
   const createMutation = useMutation({
     mutationFn: () =>
       createProduct({
-        barcode: formData.barcode,
-        name: formData.name,
+        barcode: formData.barcode.trim(),
+        name: formData.name.trim(),
         price: parseFloat(formData.price),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["products"] });
       setFormData({ barcode: "", name: "", price: "" });
       setShowForm(false);
+      toast.success("تمت إضافة المنتج");
     },
+    onError: (e: Error) => toast.error(e.message || "فشلت الإضافة"),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: EditState }) =>
+      updateProduct(id, {
+        barcode: data.barcode.trim(),
+        name: data.name.trim(),
+        price: parseFloat(data.price),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["products"] });
+      setEditingId(null);
+      toast.success("تم تحديث المنتج");
+    },
+    onError: (e: Error) => toast.error(e.message || "فشل التحديث"),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteProduct(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["products"] });
+      toast.success("تم حذف المنتج");
     },
+    onError: () => toast.error("فشل الحذف"),
   });
+
+  const startEdit = (p: Product) => {
+    setEditingId(p.id);
+    setEditData({ barcode: p.barcode, name: p.name, price: String(p.price) });
+  };
+
+  const inputClass =
+    "w-full rounded border border-ink-200 bg-white px-3 py-1.5 text-sm text-ink-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500";
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-ink-900">إدارة المنتجات</h1>
-        <p className="text-ink-500 mt-2">إضافة وتحرير وحذف المنتجات</p>
-      </div>
-
-      <div className="flex justify-end">
-        <Button
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-ink-900">إدارة المنتجات</h1>
+          <p className="mt-1 text-sm text-ink-500">إضافة وتحديث وحذف منتجات الكتالوج</p>
+        </div>
+        <button
           onClick={() => setShowForm(!showForm)}
-          className="bg-brand-600 hover:bg-brand-700 text-white"
+          className="flex shrink-0 items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 transition-colors"
         >
-          {showForm ? "إلغاء" : "إضافة منتج جديد"}
-        </Button>
+          {showForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+          {showForm ? "إلغاء" : "منتج جديد"}
+        </button>
       </div>
 
+      {/* Add form */}
       {showForm && (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            createMutation.mutate();
-          }}
-          className="max-w-lg space-y-4 p-6 rounded-lg border border-ink-200 bg-white"
-        >
-          <div>
-            <label className="block text-sm font-medium text-ink-900 mb-1">الباركود</label>
-            <input
-              type="text"
-              value={formData.barcode}
-              onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-              className="w-full px-4 py-2 rounded-lg border border-ink-200 bg-white text-ink-900"
-              required
-            />
+        <div className="max-w-lg rounded-xl border border-ink-200 bg-white p-5 shadow-sm">
+          <h2 className="mb-4 font-semibold text-ink-900">إضافة منتج جديد</h2>
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-ink-700">الباركود</label>
+              <input
+                type="text"
+                value={formData.barcode}
+                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                className={inputClass}
+                placeholder="6900000000000"
+                required
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-ink-700">الاسم</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className={inputClass}
+                placeholder="اسم المنتج"
+                required
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-ink-700">السعر (ج.م)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                className={inputClass}
+                placeholder="0.00"
+                required
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => createMutation.mutate()}
+              disabled={
+                createMutation.isPending ||
+                !formData.barcode.trim() ||
+                !formData.name.trim() ||
+                !formData.price
+              }
+              className="w-full rounded-lg bg-brand-600 py-2 text-sm font-semibold text-white hover:bg-brand-700 transition-colors disabled:opacity-50"
+            >
+              {createMutation.isPending ? "جاري الإضافة..." : "إضافة المنتج"}
+            </button>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-ink-900 mb-1">الاسم</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-2 rounded-lg border border-ink-200 bg-white text-ink-900"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-ink-900 mb-1">السعر</label>
-            <input
-              type="number"
-              step="0.01"
-              value={formData.price}
-              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-              className="w-full px-4 py-2 rounded-lg border border-ink-200 bg-white text-ink-900"
-              required
-            />
-          </div>
-
-          <Button
-            type="submit"
-            disabled={createMutation.isPending}
-            className="w-full bg-brand-600 hover:bg-brand-700 text-white"
-          >
-            {createMutation.isPending ? "جاري الإضافة..." : "إضافة المنتج"}
-          </Button>
-        </form>
+        </div>
       )}
 
-      <div className="p-6 rounded-lg border border-ink-200 bg-white">
-        <h2 className="text-xl font-bold text-ink-900 mb-4">المنتجات</h2>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-right">
-            <thead>
-              <tr className="border-b border-ink-200">
-                <th className="px-4 py-2 text-sm font-semibold text-ink-900">الباركود</th>
-                <th className="px-4 py-2 text-sm font-semibold text-ink-900">الاسم</th>
-                <th className="px-4 py-2 text-sm font-semibold text-ink-900">السعر</th>
-                <th className="px-4 py-2 text-sm font-semibold text-ink-900">الإجراءات</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products?.map((product) => (
-                <tr key={product.id} className="border-b border-ink-200 hover:bg-ink-50">
-                  <td className="px-4 py-3 text-sm text-ink-900">{product.barcode}</td>
-                  <td className="px-4 py-3 text-sm text-ink-900">{product.name}</td>
-                  <td className="px-4 py-3 text-sm text-ink-900">{product.price} ر.ي</td>
-                  <td className="px-4 py-3 text-sm">
-                    <Button
-                      onClick={() => deleteMutation.mutate(product.id)}
-                      disabled={deleteMutation.isPending}
-                      variant="ghost"
-                      className="text-red-600 hover:bg-red-50"
-                    >
-                      حذف
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Search */}
+      <div className="relative max-w-sm">
+        <div className="pointer-events-none absolute inset-y-0 end-3 flex items-center">
+          <Search className="h-4 w-4 text-ink-400" />
         </div>
+        <input
+          type="text"
+          placeholder="بحث بالاسم أو الباركود..."
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          className="w-full rounded-lg border border-ink-200 bg-white py-2.5 pe-10 ps-4 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+        />
+      </div>
+
+      {/* Table */}
+      <div className="overflow-hidden rounded-xl border border-ink-200 bg-white shadow-sm">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12 text-sm text-ink-400">
+            جاري التحميل...
+          </div>
+        ) : products.length === 0 ? (
+          <div className="py-12 text-center text-sm text-ink-500">
+            {input ? "لا توجد نتائج" : "لا توجد منتجات بعد"}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-right text-sm">
+              <thead className="border-b border-ink-200 bg-ink-50">
+                <tr>
+                  <th className="px-4 py-3 font-semibold text-ink-700">الاسم</th>
+                  <th className="px-4 py-3 font-semibold text-ink-700">الباركود</th>
+                  <th className="px-4 py-3 font-semibold text-ink-700">السعر (ج.م)</th>
+                  <th className="px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-ink-100">
+                {products.map((p) => (
+                  <tr key={p.id} className="group hover:bg-ink-50 transition-colors">
+                    {editingId === p.id ? (
+                      <>
+                        <td className="px-4 py-2">
+                          <input
+                            value={editData.name}
+                            onChange={(e) => setEditData({ ...editData, name: e.target.value })}
+                            className={inputClass}
+                          />
+                        </td>
+                        <td className="px-4 py-2">
+                          <input
+                            value={editData.barcode}
+                            onChange={(e) => setEditData({ ...editData, barcode: e.target.value })}
+                            className={inputClass + " font-mono"}
+                          />
+                        </td>
+                        <td className="px-4 py-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={editData.price}
+                            onChange={(e) => setEditData({ ...editData, price: e.target.value })}
+                            className={inputClass}
+                          />
+                        </td>
+                        <td className="px-4 py-2">
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => updateMutation.mutate({ id: p.id, data: editData })}
+                              disabled={updateMutation.isPending}
+                              className="rounded p-1.5 text-brand-600 hover:bg-brand-50"
+                              title="حفظ"
+                            >
+                              <Check className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => setEditingId(null)}
+                              className="rounded p-1.5 text-ink-500 hover:bg-ink-100"
+                              title="إلغاء"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="px-4 py-3 font-medium text-ink-900">{p.name}</td>
+                        <td className="px-4 py-3 font-mono text-ink-700">{p.barcode}</td>
+                        <td className="px-4 py-3 text-ink-700">{Number(p.price).toFixed(2)}</td>
+                        <td className="px-4 py-3">
+                          <div className="invisible flex items-center gap-1 group-hover:visible">
+                            <button
+                              onClick={() => startEdit(p)}
+                              className="rounded p-1.5 text-ink-400 hover:bg-brand-50 hover:text-brand-600 transition-colors"
+                              title="تعديل"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (confirm(`حذف "${p.name}"؟`)) deleteMutation.mutate(p.id);
+                              }}
+                              disabled={deleteMutation.isPending}
+                              className="rounded p-1.5 text-ink-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                              title="حذف"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
 }
-
