@@ -10,22 +10,25 @@ const ThemeContext = createContext<{
   setTheme: (t: Theme) => void;
 }>({ theme: "light", toggle: () => {}, setTheme: () => {} });
 
+function getInitialTheme(): Theme {
+  if (typeof window === "undefined") return "light";
+
+  const stored = localStorage.getItem("theme") as Theme | null;
+  if (stored === "light" || stored === "dark") return stored;
+
+  if (window.matchMedia("(prefers-color-scheme: dark)").matches) return "dark";
+
+  return "light";
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("light");
+  // Lazy initializer reads localStorage / system preference synchronously
+  // on first render — no effect needed, no extra render pass.
+  const [theme, setThemeState] = useState<Theme>(getInitialTheme);
 
-  // Hydrate theme from localStorage or system preference on mount
-  useEffect(() => {
-    const stored = localStorage.getItem("theme") as Theme | null;
-    if (stored === "light" || stored === "dark") {
-      setThemeState(stored);
-    } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-      setThemeState("dark");
-    }
-  }, []);
-
-  // Sync class on <html> and persist to localStorage
-  // Note: the blocking script in layout.tsx already handles the initial class,
-  // so this effect is mainly for when the user toggles the theme.
+  // Sync class on <html> and persist to localStorage.
+  // Note: the blocking script in layout.tsx already handles the initial class
+  // on first paint, so this effect mainly re-syncs when the user toggles.
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
     localStorage.setItem("theme", theme);
