@@ -6,24 +6,30 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:push": "npm run db:generate && npm run db:migrate",
+    "db:seed": "tsx scripts/seed-products.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.5.9",
     "@hookform/resolvers": "^5.4.0",
     "@tanstack/react-query": "^5.101.1",
+    "@tidbcloud/serverless": "^0.3.0",
     "date-fns": "^4.4.0",
     "drizzle-orm": "^0.45.2",
     "drizzle-zod": "^0.8.3",
     "lucide-react": "^1.21.0",
+    "mysql2": "^3.11.0",
     "next": "^15.1.7",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-hook-form": "^7.80.0",
     "sonner": "^2.0.7",
     "tailwindcss-animate": "^1.0.7",
-    "zod": "^4.4.3",
-    "mysql2": "^3.11.0"
+    "xlsx": "^0.18.5",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

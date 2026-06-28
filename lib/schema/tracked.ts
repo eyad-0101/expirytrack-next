@@ -11,7 +11,7 @@ export const trackedItemsTable = mysqlTable("tracked_items", {
     .references(() => productsTable.id, { onDelete: "cascade" }),
   expiryDate:  date("expiry_date", { mode: "string" }).notNull(),
   quantity:    int("quantity").notNull().default(1),
-  notes:       text("notes").notNull().default(""),
+  notes:       text("notes").notNull().$default(() => ""),
 });
 
 export const insertTrackedItemSchema = createInsertSchema(trackedItemsTable).omit({ id: true });
