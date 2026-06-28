@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -17,11 +17,12 @@ import { listTracked, deleteTracked, getMe, type TrackedItem } from "@/lib/api-c
 import { statusOf, fmtDate, fmtDaysLabel, diffDays, STATUS_META } from "@/lib/expiry";
 
 /* ── SwipeableCard — mobile swipe-to-delete ─────────────────── */
-// RTL layout: user swipes RIGHT-to-LEFT (finger moves left).
-// The card slides LEFT (translateX negative), revealing the red
-// delete button that sits on the LEFT side (which is the END in RTL).
-const SWIPE_THRESHOLD = 72;  // px needed to snap open
-const SWIPE_SNAP = 88;        // how far the card rests when open
+// RTL: user swipes right-to-left (finger moves left).
+// Card slides LEFT revealing the red delete button on the left edge.
+// IMPORTANT: uses native addEventListener with passive:false so
+// e.preventDefault() actually works (React touch handlers are passive).
+const SWIPE_THRESHOLD = 72;
+const SWIPE_SNAP = 88;
 
 function SwipeableCard({
   children,
@@ -32,60 +33,25 @@ function SwipeableCard({
   onDelete: () => void;
   isDeleting: boolean;
 }) {
-  const [swipeX, setSwipeX] = useState(0); // always 0..SWIPE_SNAP (positive = card moved left)
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [swipeX, setSwipeX] = useState(0);
   const [open, setOpen] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(true);
+
+  // All mutable gesture state in refs — never causes re-render mid-gesture
   const startX = useRef(0);
   const startY = useRef(0);
-  const dragging = useRef(false);
-  const lockedAxis = useRef<"h" | "v" | null>(null);
-  const liveX = useRef(0); // shadow of swipeX for onTouchEnd closure
+  const axis = useRef<"h" | "v" | null>(null);
+  const liveX = useRef(0);
+  const isOpen = useRef(false); // mirror of `open` accessible inside native listeners
 
-  const onTouchStart = useCallback((e: React.TouchEvent) => {
-    startX.current = e.touches[0].clientX;
-    startY.current = e.touches[0].clientY;
-    dragging.current = true;
-    lockedAxis.current = null;
-    liveX.current = open ? SWIPE_SNAP : 0;
-    setIsAnimating(false);
-  }, [open]);
-
-  const onTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!dragging.current) return;
-    const dx = startX.current - e.touches[0].clientX; // positive = finger moved left
-    const dy = Math.abs(e.touches[0].clientY - startY.current);
-
-    // Lock axis on first significant movement so vertical scroll still works
-    if (!lockedAxis.current) {
-      if (Math.abs(dx) < 4 && dy < 4) return;
-      lockedAxis.current = Math.abs(dx) > dy ? "h" : "v";
-    }
-    if (lockedAxis.current === "v") return;
-
-    e.preventDefault(); // prevent page scroll while swiping horizontally
-    const base = open ? SWIPE_SNAP : 0;
-    const raw = base + dx;
-    const clamped = Math.min(Math.max(0, raw), SWIPE_SNAP + 24);
-    liveX.current = clamped;
-    setSwipeX(clamped);
-  }, [open]);
-
-  const onTouchEnd = useCallback(() => {
-    dragging.current = false;
-    setIsAnimating(true);
-    if (liveX.current >= SWIPE_THRESHOLD) {
-      setSwipeX(SWIPE_SNAP);
-      setOpen(true);
-    } else {
-      setSwipeX(0);
-      setOpen(false);
-    }
-  }, []);
+  // Keep isOpen ref in sync
+  useEffect(() => { isOpen.current = open; }, [open]);
 
   const snapBack = useCallback(() => {
+    liveX.current = 0;
     setSwipeX(0);
     setOpen(false);
-    liveX.current = 0;
+    isOpen.current = false;
   }, []);
 
   const handleDelete = useCallback(() => {
@@ -95,14 +61,71 @@ function SwipeableCard({
     }
   }, [onDelete, snapBack]);
 
-  // reveal = how much of the delete button is showing (0..SWIPE_SNAP)
-  const revealing = swipeX > 0;
+  // Attach native (non-passive) listeners so preventDefault works
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+
+    const onStart = (e: TouchEvent) => {
+      startX.current = e.touches[0].clientX;
+      startY.current = e.touches[0].clientY;
+      axis.current = null;
+      liveX.current = isOpen.current ? SWIPE_SNAP : 0;
+      // Disable transition during drag
+      el.style.transition = "none";
+    };
+
+    const onMove = (e: TouchEvent) => {
+      const dx = startX.current - e.touches[0].clientX; // +ve = finger moved left
+      const dy = Math.abs(e.touches[0].clientY - startY.current);
+
+      if (!axis.current) {
+        if (Math.abs(dx) < 5 && dy < 5) return;
+        axis.current = Math.abs(dx) > dy ? "h" : "v";
+      }
+      if (axis.current === "v") return;
+
+      e.preventDefault(); // works because listener is non-passive
+      const base = isOpen.current ? SWIPE_SNAP : 0;
+      const clamped = Math.min(Math.max(0, base + dx), SWIPE_SNAP + 24);
+      liveX.current = clamped;
+      // Directly mutate the DOM for zero-lag tracking
+      el.style.transform = `translateX(-${clamped}px)`;
+      setSwipeX(clamped); // keep React state in sync for button visibility
+    };
+
+    const onEnd = () => {
+      el.style.transition = "transform 0.2s ease, box-shadow 0.2s ease";
+      if (liveX.current >= SWIPE_THRESHOLD) {
+        liveX.current = SWIPE_SNAP;
+        el.style.transform = `translateX(-${SWIPE_SNAP}px)`;
+        setSwipeX(SWIPE_SNAP);
+        setOpen(true);
+        isOpen.current = true;
+      } else {
+        liveX.current = 0;
+        el.style.transform = "translateX(0)";
+        setSwipeX(0);
+        setOpen(false);
+        isOpen.current = false;
+      }
+    };
+
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchmove",  onMove,  { passive: false }); // non-passive!
+    el.addEventListener("touchend",   onEnd,   { passive: true });
+
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove",  onMove);
+      el.removeEventListener("touchend",   onEnd);
+    };
+  }, []); // empty — all state accessed via refs
 
   return (
     <div className="relative rounded-xl" style={{ overflow: "hidden" }}>
-      {/* Delete button — anchored to LEFT edge (end-side in RTL) */}
+      {/* Delete button — left edge (end-side in RTL), always mounted */}
       <div
-        aria-hidden={!revealing}
         className="absolute inset-y-0 left-0 flex items-center justify-center rounded-xl bg-red-600"
         style={{ width: SWIPE_SNAP }}
       >
@@ -123,21 +146,18 @@ function SwipeableCard({
         </button>
       </div>
 
-      {/* Card that slides LEFT to reveal the button */}
+      {/* Card — slides left to reveal button; touch handlers attached via useEffect */}
       <div
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
+        ref={cardRef}
         onClick={open ? snapBack : undefined}
+        onKeyDown={(e) => { if (e.key === "Escape") snapBack(); }}
         role="button"
         tabIndex={0}
-        onKeyDown={(e) => { if (e.key === "Escape") snapBack(); }}
         className="relative rounded-xl bg-white dark:bg-ink-800"
         style={{
-          transform: `translateX(-${swipeX}px)`,
-          transition: isAnimating ? "transform 0.2s ease, box-shadow 0.2s ease" : "none",
-          boxShadow: swipeX > 0 ? `0 2px 12px rgba(0,0,0,0.10)` : undefined,
-          touchAction: "pan-y",  // allow vertical scroll; we call e.preventDefault() for horizontal
+          transform: "translateX(0)",
+          transition: "transform 0.2s ease, box-shadow 0.2s ease",
+          boxShadow: swipeX > 0 ? "0 2px 12px rgba(0,0,0,0.10)" : undefined,
           userSelect: "none",
           willChange: "transform",
         }}
