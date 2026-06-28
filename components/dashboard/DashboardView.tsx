@@ -17,8 +17,11 @@ import { listTracked, deleteTracked, getMe, type TrackedItem } from "@/lib/api-c
 import { statusOf, fmtDate, fmtDaysLabel, diffDays, STATUS_META } from "@/lib/expiry";
 
 /* ── SwipeableCard — mobile swipe-to-delete ─────────────────── */
-const SWIPE_THRESHOLD = 80;
-const SWIPE_SNAP = 120;
+// RTL layout: user swipes RIGHT-to-LEFT (finger moves left).
+// The card slides LEFT (translateX negative), revealing the red
+// delete button that sits on the LEFT side (which is the END in RTL).
+const SWIPE_THRESHOLD = 72;  // px needed to snap open
+const SWIPE_SNAP = 88;        // how far the card rests when open
 
 function SwipeableCard({
   children,
@@ -29,31 +32,45 @@ function SwipeableCard({
   onDelete: () => void;
   isDeleting: boolean;
 }) {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [swipeX, setSwipeX] = useState(0);
+  const [swipeX, setSwipeX] = useState(0); // always 0..SWIPE_SNAP (positive = card moved left)
   const [open, setOpen] = useState(false);
   const startX = useRef(0);
-  const isDragging = useRef(false);
-  const swipeXRef = useRef(0);
+  const startY = useRef(0);
+  const dragging = useRef(false);
+  const lockedAxis = useRef<"h" | "v" | null>(null);
+  const liveX = useRef(0); // shadow of swipeX for onTouchEnd closure
 
   const onTouchStart = useCallback((e: React.TouchEvent) => {
     startX.current = e.touches[0].clientX;
-    isDragging.current = true;
-  }, []);
+    startY.current = e.touches[0].clientY;
+    dragging.current = true;
+    lockedAxis.current = null;
+    liveX.current = open ? SWIPE_SNAP : 0;
+  }, [open]);
 
   const onTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isDragging.current) return;
-    // RTL: swipe LEFT-to-RIGHT reveals the delete button on the right
-    const dx = e.touches[0].clientX - startX.current;
-    // Clamp: allow up to SWIPE_SNAP, resist beyond that
-    const clamped = Math.min(Math.max(0, dx), SWIPE_SNAP + 20);
-    swipeXRef.current = clamped;
+    if (!dragging.current) return;
+    const dx = startX.current - e.touches[0].clientX; // positive = finger moved left
+    const dy = Math.abs(e.touches[0].clientY - startY.current);
+
+    // Lock axis on first significant movement so vertical scroll still works
+    if (!lockedAxis.current) {
+      if (Math.abs(dx) < 4 && dy < 4) return;
+      lockedAxis.current = Math.abs(dx) > dy ? "h" : "v";
+    }
+    if (lockedAxis.current === "v") return;
+
+    e.preventDefault(); // prevent page scroll while swiping horizontally
+    const base = open ? SWIPE_SNAP : 0;
+    const raw = base + dx;
+    const clamped = Math.min(Math.max(0, raw), SWIPE_SNAP + 24);
+    liveX.current = clamped;
     setSwipeX(clamped);
-  }, []);
+  }, [open]);
 
   const onTouchEnd = useCallback(() => {
-    isDragging.current = false;
-    if (swipeXRef.current >= SWIPE_THRESHOLD) {
+    dragging.current = false;
+    if (liveX.current >= SWIPE_THRESHOLD) {
       setSwipeX(SWIPE_SNAP);
       setOpen(true);
     } else {
@@ -65,6 +82,7 @@ function SwipeableCard({
   const snapBack = useCallback(() => {
     setSwipeX(0);
     setOpen(false);
+    liveX.current = 0;
   }, []);
 
   const handleDelete = useCallback(() => {
@@ -74,20 +92,22 @@ function SwipeableCard({
     }
   }, [onDelete, snapBack]);
 
+  // reveal = how much of the delete button is showing (0..SWIPE_SNAP)
+  const revealing = swipeX > 0;
+
   return (
-    <div className="relative overflow-hidden rounded-xl">
-      {/* Delete action underneath the card — on the RIGHT for RTL */}
+    <div className="relative rounded-xl" style={{ overflow: "hidden" }}>
+      {/* Delete button — anchored to LEFT edge (end-side in RTL) */}
       <div
-        className={`absolute inset-y-0 right-0 flex items-center justify-start rounded-xl transition-all duration-200 ${
-          open ? "opacity-100" : "opacity-0 pointer-events-none"
-        }`}
+        aria-hidden={!revealing}
+        className="absolute inset-y-0 left-0 flex items-center justify-center rounded-xl bg-red-600"
         style={{ width: SWIPE_SNAP }}
       >
         <button
           onClick={handleDelete}
           disabled={isDeleting}
           aria-label="حذف"
-          className="flex h-full w-full items-center justify-center gap-1.5 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-red-700 active:bg-red-800 disabled:opacity-50"
+          className="flex h-full w-full items-center justify-center gap-1.5 text-sm font-semibold text-white disabled:opacity-50"
         >
           {isDeleting ? (
             <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
@@ -100,39 +120,27 @@ function SwipeableCard({
         </button>
       </div>
 
-      {/* Card that slides */}
+      {/* Card that slides LEFT to reveal the button */}
       <div
-        ref={cardRef}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
         onClick={open ? snapBack : undefined}
         role="button"
         tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") snapBack();
-        }}
-        className="relative rounded-xl bg-white shadow-sm transition-[transform,box_shadow] duration-200 ease-out dark:bg-ink-800"
+        onKeyDown={(e) => { if (e.key === "Escape") snapBack(); }}
+        className="relative rounded-xl bg-white dark:bg-ink-800"
         style={{
-          transform: `translateX(${swipeX}px)`,
-          // Slight shadow increase as card slides
-          boxShadow: swipeX > 0
-            ? `${Math.min(swipeX, 8)}px 0 16px -4px rgba(0,0,0,0.08)`
-            : undefined,
-          touchAction: "pan-y",
+          transform: `translateX(-${swipeX}px)`,
+          transition: dragging.current ? "none" : "transform 0.2s ease, box-shadow 0.2s ease",
+          boxShadow: swipeX > 0 ? `0 2px 12px rgba(0,0,0,0.10)` : undefined,
+          touchAction: "pan-y",  // allow vertical scroll; we call e.preventDefault() for horizontal
           userSelect: "none",
+          willChange: "transform",
         }}
       >
         {children}
       </div>
-
-      {/* Subtle hint on first render — a tiny peek of red on the right edge (RTL) */}
-      {!open && swipeX === 0 && (
-        <div
-          className="pointer-events-none absolute inset-y-2 right-0 w-1 rounded-full bg-red-400/30"
-          aria-hidden="true"
-        />
-      )}
     </div>
   );
 }
