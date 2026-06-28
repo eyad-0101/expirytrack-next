@@ -38,42 +38,48 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const isActive = (href: string) => pathname === href;
 
+  // Active page is shown with bold text + brand colour (no background box),
+  // so there's nothing for it to "lose" on re-render. A visible focus ring is
+  // added so keyboard (Tab) navigation actually shows where focus is.
   const linkClass = (href: string) =>
-    `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+    `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-ink-800 ${
       isActive(href)
-        ? "bg-brand-600 text-white shadow-sm dark:bg-brand-500"
-        : "text-ink-700 hover:bg-ink-100 hover:text-ink-900 dark:text-ink-300 dark:hover:bg-ink-800 dark:hover:text-ink-100 active:scale-[0.98]"
+        ? "font-bold text-brand-700 dark:text-brand-300"
+        : "font-medium text-ink-700 hover:bg-ink-100 hover:text-ink-900 dark:text-ink-300 dark:hover:bg-ink-800 dark:hover:text-ink-100 active:scale-[0.98]"
     }`;
+
+  const iconClass = (href: string) =>
+    `h-4 w-4 shrink-0 ${isActive(href) ? "text-brand-600 dark:text-brand-400" : "text-ink-400 dark:text-ink-500"}`;
 
   const NavContent = ({ onLinkClick }: { onLinkClick?: () => void }) => (
     <nav className="flex flex-col gap-1" aria-label="القائمة الرئيسية">
       <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-widest text-ink-400 dark:text-ink-500">
         نظرة عامة
       </p>
-      <Link href="/dashboard" className={linkClass("/dashboard")} onClick={onLinkClick}>
-        <LayoutDashboard className={`h-4 w-4 shrink-0 ${isActive("/dashboard") ? "" : "text-ink-400 dark:text-ink-500"}`} aria-hidden="true" />
+      <Link href="/dashboard" className={linkClass("/dashboard")} onClick={onLinkClick} aria-current={isActive("/dashboard") ? "page" : undefined}>
+        <LayoutDashboard className={iconClass("/dashboard")} aria-hidden="true" />
         العناصر المتابعة
       </Link>
-      <Link href="/catalog" className={linkClass("/catalog")} onClick={onLinkClick}>
-        <List className={`h-4 w-4 shrink-0 ${isActive("/catalog") ? "" : "text-ink-400 dark:text-ink-500"}`} aria-hidden="true" />
+      <Link href="/catalog" className={linkClass("/catalog")} onClick={onLinkClick} aria-current={isActive("/catalog") ? "page" : undefined}>
+        <List className={iconClass("/catalog")} aria-hidden="true" />
         الكتالوج
       </Link>
 
       <div className="my-4 border-t border-ink-100 dark:border-ink-700" />
-      <Link href="/add" className={linkClass("/add")} onClick={onLinkClick}>
-        <Plus className={`h-4 w-4 shrink-0 ${isActive("/add") ? "" : "text-ink-400 dark:text-ink-500"}`} aria-hidden="true" />
+      <Link href="/add" className={linkClass("/add")} onClick={onLinkClick} aria-current={isActive("/add") ? "page" : undefined}>
+        <Plus className={iconClass("/add")} aria-hidden="true" />
         إضافة عنصر
       </Link>
 
       {isAdmin && (
         <>
           <div className="my-4 border-t border-ink-100 dark:border-ink-700" />
-          <Link href="/admin/catalog" className={linkClass("/admin/catalog")} onClick={onLinkClick}>
-            <Package className={`h-4 w-4 shrink-0 ${isActive("/admin/catalog") ? "" : "text-ink-400 dark:text-ink-500"}`} aria-hidden="true" />
+          <Link href="/admin/catalog" className={linkClass("/admin/catalog")} onClick={onLinkClick} aria-current={isActive("/admin/catalog") ? "page" : undefined}>
+            <Package className={iconClass("/admin/catalog")} aria-hidden="true" />
             المنتجات
           </Link>
-          <Link href="/admin/users" className={linkClass("/admin/users")} onClick={onLinkClick}>
-            <Users className={`h-4 w-4 shrink-0 ${isActive("/admin/users") ? "" : "text-ink-400 dark:text-ink-500"}`} aria-hidden="true" />
+          <Link href="/admin/users" className={linkClass("/admin/users")} onClick={onLinkClick} aria-current={isActive("/admin/users") ? "page" : undefined}>
+            <Users className={iconClass("/admin/users")} aria-hidden="true" />
             المستخدمون
           </Link>
         </>
@@ -87,7 +93,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <button
         onClick={toggle}
         aria-label={theme === "dark" ? "تفعيل الوضع النهاري" : "تفعيل الوضع الليلي"}
-        className="shrink-0 rounded-lg p-1.5 text-ink-400 transition-all hover:bg-ink-100 hover:text-ink-700 dark:text-ink-500 dark:hover:bg-ink-700 dark:hover:text-ink-200"
+        className="shrink-0 rounded-lg p-1.5 text-ink-400 transition-all hover:bg-ink-100 hover:text-ink-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 dark:text-ink-500 dark:hover:bg-ink-700 dark:hover:text-ink-200"
       >
         {theme === "dark" ? (
           <Sun className="h-4 w-4" aria-hidden="true" />
@@ -130,7 +136,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <button
             onClick={() => signOut({ redirectUrl: "/" })}
             aria-label="تسجيل الخروج"
-            className="shrink-0 rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-ink-500 dark:hover:bg-red-950 dark:hover:text-red-400"
+            className="shrink-0 rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50 dark:text-ink-500 dark:hover:bg-red-950 dark:hover:text-red-400"
           >
             <LogOut className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -201,7 +207,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <button
             onClick={() => setMobileOpen(false)}
             aria-label="إغلاق القائمة"
-            className="rounded-lg p-1.5 text-ink-500 transition-colors hover:bg-ink-100 dark:text-ink-400 dark:hover:bg-ink-700"
+            className="rounded-lg p-1.5 text-ink-500 transition-colors hover:bg-ink-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 dark:text-ink-400 dark:hover:bg-ink-700"
           >
             <X className="h-5 w-5" aria-hidden="true" />
           </button>
@@ -217,7 +223,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <button
           onClick={() => setMobileOpen(true)}
           aria-label="فتح القائمة"
-          className="rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-ink-100 dark:text-ink-400 dark:hover:bg-ink-700"
+          className="rounded-lg p-1.5 text-ink-600 transition-colors hover:bg-ink-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 dark:text-ink-400 dark:hover:bg-ink-700"
         >
           <Menu className="h-5 w-5" aria-hidden="true" />
         </button>
@@ -242,15 +248,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             key={href}
             href={href}
             aria-current={isActive(href) ? "page" : undefined}
-            className={`relative flex flex-col items-center justify-center gap-1 px-3 py-1 transition-colors ${
-              isActive(href) ? "text-brand-600 dark:text-brand-400" : "text-ink-400 hover:text-ink-700 dark:text-ink-500 dark:hover:text-ink-300"
+            className={`relative flex flex-col items-center justify-center gap-1 px-3 py-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-ink-800 ${
+              isActive(href) ? "font-bold text-brand-600 dark:text-brand-400" : "text-ink-400 hover:text-ink-700 dark:text-ink-500 dark:hover:text-ink-300"
             }`}
           >
             {isActive(href) && (
               <span className="absolute -top-px left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-full bg-brand-600 dark:bg-brand-400" aria-hidden="true" />
             )}
             <Icon className="h-5 w-5" aria-hidden="true" />
-            <span className="text-[10px] font-medium">{label}</span>
+            <span className={`text-[10px] ${isActive(href) ? "font-bold" : "font-medium"}`}>{label}</span>
           </Link>
         ))}
       </nav>
