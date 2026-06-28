@@ -34,6 +34,7 @@ function SwipeableCard({
 }) {
   const [swipeX, setSwipeX] = useState(0); // always 0..SWIPE_SNAP (positive = card moved left)
   const [open, setOpen] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(true);
   const startX = useRef(0);
   const startY = useRef(0);
   const dragging = useRef(false);
@@ -46,6 +47,7 @@ function SwipeableCard({
     dragging.current = true;
     lockedAxis.current = null;
     liveX.current = open ? SWIPE_SNAP : 0;
+    setIsAnimating(false);
   }, [open]);
 
   const onTouchMove = useCallback((e: React.TouchEvent) => {
@@ -70,6 +72,7 @@ function SwipeableCard({
 
   const onTouchEnd = useCallback(() => {
     dragging.current = false;
+    setIsAnimating(true);
     if (liveX.current >= SWIPE_THRESHOLD) {
       setSwipeX(SWIPE_SNAP);
       setOpen(true);
@@ -132,7 +135,7 @@ function SwipeableCard({
         className="relative rounded-xl bg-white dark:bg-ink-800"
         style={{
           transform: `translateX(-${swipeX}px)`,
-          transition: dragging.current ? "none" : "transform 0.2s ease, box-shadow 0.2s ease",
+          transition: isAnimating ? "transform 0.2s ease, box-shadow 0.2s ease" : "none",
           boxShadow: swipeX > 0 ? `0 2px 12px rgba(0,0,0,0.10)` : undefined,
           touchAction: "pan-y",  // allow vertical scroll; we call e.preventDefault() for horizontal
           userSelect: "none",
