@@ -20,6 +20,141 @@ import { useQuery } from "@tanstack/react-query";
 import { getMe } from "@/lib/api-client";
 import { useTheme } from "@/lib/use-theme";
 
+// ── Helpers (module scope — pure functions, no closures needed) ──
+function isActivePath(pathname: string, href: string) {
+  return pathname === href;
+}
+
+function linkClass(pathname: string, href: string) {
+  const active = isActivePath(pathname, href);
+  return `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-ink-800 ${
+    active
+      ? "font-bold text-brand-700 dark:text-brand-300"
+      : "font-medium text-ink-700 hover:bg-ink-100 hover:text-ink-900 dark:text-ink-300 dark:hover:bg-ink-800 dark:hover:text-ink-100 active:scale-[0.98]"
+  }`;
+}
+
+function iconClass(pathname: string, href: string) {
+  const active = isActivePath(pathname, href);
+  return `h-4 w-4 shrink-0 ${active ? "text-brand-600 dark:text-brand-400" : "text-ink-400 dark:text-ink-500"}`;
+}
+
+// ── NavContent — top-level component, reads pathname itself ──
+function NavContent({ isAdmin, onLinkClick }: { isAdmin: boolean; onLinkClick?: () => void }) {
+  const pathname = usePathname();
+
+  return (
+    <nav className="flex flex-col gap-1" aria-label="القائمة الرئيسية">
+      <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-widest text-ink-400 dark:text-ink-500">
+        نظرة عامة
+      </p>
+      <Link href="/dashboard" className={linkClass(pathname, "/dashboard")} onClick={onLinkClick} aria-current={isActivePath(pathname, "/dashboard") ? "page" : undefined}>
+        <LayoutDashboard className={iconClass(pathname, "/dashboard")} aria-hidden="true" />
+        العناصر المتابعة
+      </Link>
+      <Link href="/catalog" className={linkClass(pathname, "/catalog")} onClick={onLinkClick} aria-current={isActivePath(pathname, "/catalog") ? "page" : undefined}>
+        <List className={iconClass(pathname, "/catalog")} aria-hidden="true" />
+        الكتالوج
+      </Link>
+
+      <div className="my-4 border-t border-ink-100 dark:border-ink-700" />
+      <Link href="/add" className={linkClass(pathname, "/add")} onClick={onLinkClick} aria-current={isActivePath(pathname, "/add") ? "page" : undefined}>
+        <Plus className={iconClass(pathname, "/add")} aria-hidden="true" />
+        إضافة عنصر
+      </Link>
+
+      {isAdmin && (
+        <>
+          <div className="my-4 border-t border-ink-100 dark:border-ink-700" />
+          <Link href="/admin/catalog" className={linkClass(pathname, "/admin/catalog")} onClick={onLinkClick} aria-current={isActivePath(pathname, "/admin/catalog") ? "page" : undefined}>
+            <Package className={iconClass(pathname, "/admin/catalog")} aria-hidden="true" />
+            المنتجات
+          </Link>
+          <Link href="/admin/users" className={linkClass(pathname, "/admin/users")} onClick={onLinkClick} aria-current={isActivePath(pathname, "/admin/users") ? "page" : undefined}>
+            <Users className={iconClass(pathname, "/admin/users")} aria-hidden="true" />
+            المستخدمون
+          </Link>
+        </>
+      )}
+    </nav>
+  );
+}
+
+// ── ThemeToggle — fully self-contained, no props needed ──
+function ThemeToggle() {
+  const { theme, toggle } = useTheme();
+  return (
+    <button
+      onClick={toggle}
+      aria-label={theme === "dark" ? "تفعيل الوضع النهاري" : "تفعيل الوضع الليلي"}
+      className="shrink-0 rounded-lg p-1.5 text-ink-400 transition-all hover:bg-ink-100 hover:text-ink-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 dark:text-ink-500 dark:hover:bg-ink-700 dark:hover:text-ink-200"
+    >
+      {theme === "dark" ? (
+        <Sun className="h-4 w-4" aria-hidden="true" />
+      ) : (
+        <Moon className="h-4 w-4" aria-hidden="true" />
+      )}
+    </button>
+  );
+}
+
+// ── UserFooter — top-level component, takes user data as props ──
+function UserFooter({
+  imageUrl,
+  displayName,
+  displayEmail,
+  initials,
+  isAdmin,
+  onSignOut,
+}: {
+  imageUrl?: string | null;
+  displayName: string;
+  displayEmail: string;
+  initials: string;
+  isAdmin: boolean;
+  onSignOut: () => void;
+}) {
+  return (
+    <div className="border-t border-ink-200 bg-ink-50/50 p-3 dark:border-ink-700 dark:bg-ink-800/50">
+      <div className="flex items-center gap-2.5 rounded-lg p-2 transition-colors hover:bg-ink-100/50 dark:hover:bg-ink-700/50">
+        {/* Avatar */}
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-700 ring-1 ring-white dark:bg-brand-900 dark:text-brand-200 dark:ring-ink-700">
+          {imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={imageUrl}
+              alt={displayName}
+              className="h-8 w-8 rounded-full object-cover"
+            />
+          ) : (
+            initials
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          {displayName && (
+            <p className="truncate text-xs font-semibold text-ink-900 dark:text-ink-100">{displayName}</p>
+          )}
+          {displayEmail !== displayName && (
+            <p className="truncate text-[11px] text-ink-500 dark:text-ink-400">{displayEmail}</p>
+          )}
+          {isAdmin && (
+            <p className="mt-0.5 text-[11px] font-semibold text-brand-600 dark:text-brand-400">مشرف</p>
+          )}
+        </div>
+        <ThemeToggle />
+        <button
+          onClick={onSignOut}
+          aria-label="تسجيل الخروج"
+          className="shrink-0 rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50 dark:text-ink-500 dark:hover:bg-red-950 dark:hover:text-red-400"
+        >
+          <LogOut className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── AppShell ──
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { signOut } = useClerk();
@@ -36,114 +171,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const displayName = user?.fullName || user?.emailAddresses?.[0]?.emailAddress || "";
   const displayEmail = user?.emailAddresses?.[0]?.emailAddress ?? "";
 
-  const isActive = (href: string) => pathname === href;
-
-  // Active page is shown with bold text + brand colour (no background box),
-  // so there's nothing for it to "lose" on re-render. A visible focus ring is
-  // added so keyboard (Tab) navigation actually shows where focus is.
-  const linkClass = (href: string) =>
-    `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-ink-800 ${
-      isActive(href)
-        ? "font-bold text-brand-700 dark:text-brand-300"
-        : "font-medium text-ink-700 hover:bg-ink-100 hover:text-ink-900 dark:text-ink-300 dark:hover:bg-ink-800 dark:hover:text-ink-100 active:scale-[0.98]"
-    }`;
-
-  const iconClass = (href: string) =>
-    `h-4 w-4 shrink-0 ${isActive(href) ? "text-brand-600 dark:text-brand-400" : "text-ink-400 dark:text-ink-500"}`;
-
-  const NavContent = ({ onLinkClick }: { onLinkClick?: () => void }) => (
-    <nav className="flex flex-col gap-1" aria-label="القائمة الرئيسية">
-      <p className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-widest text-ink-400 dark:text-ink-500">
-        نظرة عامة
-      </p>
-      <Link href="/dashboard" className={linkClass("/dashboard")} onClick={onLinkClick} aria-current={isActive("/dashboard") ? "page" : undefined}>
-        <LayoutDashboard className={iconClass("/dashboard")} aria-hidden="true" />
-        العناصر المتابعة
-      </Link>
-      <Link href="/catalog" className={linkClass("/catalog")} onClick={onLinkClick} aria-current={isActive("/catalog") ? "page" : undefined}>
-        <List className={iconClass("/catalog")} aria-hidden="true" />
-        الكتالوج
-      </Link>
-
-      <div className="my-4 border-t border-ink-100 dark:border-ink-700" />
-      <Link href="/add" className={linkClass("/add")} onClick={onLinkClick} aria-current={isActive("/add") ? "page" : undefined}>
-        <Plus className={iconClass("/add")} aria-hidden="true" />
-        إضافة عنصر
-      </Link>
-
-      {isAdmin && (
-        <>
-          <div className="my-4 border-t border-ink-100 dark:border-ink-700" />
-          <Link href="/admin/catalog" className={linkClass("/admin/catalog")} onClick={onLinkClick} aria-current={isActive("/admin/catalog") ? "page" : undefined}>
-            <Package className={iconClass("/admin/catalog")} aria-hidden="true" />
-            المنتجات
-          </Link>
-          <Link href="/admin/users" className={linkClass("/admin/users")} onClick={onLinkClick} aria-current={isActive("/admin/users") ? "page" : undefined}>
-            <Users className={iconClass("/admin/users")} aria-hidden="true" />
-            المستخدمون
-          </Link>
-        </>
-      )}
-    </nav>
-  );
-
-  const ThemeToggle = () => {
-    const { theme, toggle } = useTheme();
-    return (
-      <button
-        onClick={toggle}
-        aria-label={theme === "dark" ? "تفعيل الوضع النهاري" : "تفعيل الوضع الليلي"}
-        className="shrink-0 rounded-lg p-1.5 text-ink-400 transition-all hover:bg-ink-100 hover:text-ink-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50 dark:text-ink-500 dark:hover:bg-ink-700 dark:hover:text-ink-200"
-      >
-        {theme === "dark" ? (
-          <Sun className="h-4 w-4" aria-hidden="true" />
-        ) : (
-          <Moon className="h-4 w-4" aria-hidden="true" />
-        )}
-      </button>
-    );
-  };
-
-  const UserFooter = () => {
-    return (
-      <div className="border-t border-ink-200 bg-ink-50/50 p-3 dark:border-ink-700 dark:bg-ink-800/50">
-        <div className="flex items-center gap-2.5 rounded-lg p-2 transition-colors hover:bg-ink-100/50 dark:hover:bg-ink-700/50">
-          {/* Avatar */}
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-700 ring-1 ring-white dark:bg-brand-900 dark:text-brand-200 dark:ring-ink-700">
-            {user?.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={user.imageUrl}
-                alt={displayName}
-                className="h-8 w-8 rounded-full object-cover"
-              />
-            ) : (
-              initials
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            {displayName && (
-              <p className="truncate text-xs font-semibold text-ink-900 dark:text-ink-100">{displayName}</p>
-            )}
-            {displayEmail !== displayName && (
-              <p className="truncate text-[11px] text-ink-500 dark:text-ink-400">{displayEmail}</p>
-            )}
-            {isAdmin && (
-              <p className="mt-0.5 text-[11px] font-semibold text-brand-600 dark:text-brand-400">مشرف</p>
-            )}
-          </div>
-          <ThemeToggle />
-          <button
-            onClick={() => signOut({ redirectUrl: "/" })}
-            aria-label="تسجيل الخروج"
-            className="shrink-0 rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50 dark:text-ink-500 dark:hover:bg-red-950 dark:hover:text-red-400"
-          >
-            <LogOut className="h-4 w-4" aria-hidden="true" />
-          </button>
-        </div>
-      </div>
-    );
-  };
+  const isActive = (href: string) => isActivePath(pathname, href);
 
   const mobileNavItems = [
     { href: "/dashboard", label: "العناصر", Icon: LayoutDashboard },
@@ -156,6 +184,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         ]
       : []),
   ];
+
+  const handleSignOut = () => signOut({ redirectUrl: "/" });
 
   return (
     <div className="min-h-[100dvh] bg-ink-50 dark:bg-ink-900">
@@ -179,9 +209,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 py-4">
-          <NavContent />
+          <NavContent isAdmin={isAdmin} />
         </div>
-        <UserFooter />
+        <UserFooter
+          imageUrl={user?.imageUrl}
+          displayName={displayName}
+          displayEmail={displayEmail}
+          initials={initials}
+          isAdmin={isAdmin}
+          onSignOut={handleSignOut}
+        />
       </aside>
 
       {/* ── Mobile overlay backdrop ───────────────────────────── */}
@@ -213,9 +250,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-3 py-4">
-          <NavContent onLinkClick={() => setMobileOpen(false)} />
+          <NavContent isAdmin={isAdmin} onLinkClick={() => setMobileOpen(false)} />
         </div>
-        <UserFooter />
+        <UserFooter
+          imageUrl={user?.imageUrl}
+          displayName={displayName}
+          displayEmail={displayEmail}
+          initials={initials}
+          isAdmin={isAdmin}
+          onSignOut={handleSignOut}
+        />
       </div>
 
       {/* ── Mobile top bar ───────────────────────────────────── */}
