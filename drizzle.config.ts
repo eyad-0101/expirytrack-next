@@ -2,7 +2,7 @@ import { defineConfig } from "drizzle-kit";
 import { config } from "dotenv";
 
 // Manually load your environment variables first!
-config({ path: ".env.local" }); // Or ".env.local" if that is what you use
+config({ path: ".env.local" });
 
 export default defineConfig({
   dialect: "mysql",
@@ -14,6 +14,11 @@ export default defineConfig({
 
   out: "./drizzle",
   dbCredentials: {
-    url: process.env.DATABASE_URL!, // format: mysql://user:password@host:port/database
+    // Format for TiDB:
+    // mysql://<prefix>.root:<password>@gateway01.<region>.prod.aws.tidbcloud.com:4000/expirytrack?ssl={"rejectUnauthorized":true}
+    //
+    // Format for local XAMPP (no SSL needed):
+    // mysql://root:@localhost:3306/expirytrack
+    url: process.env.DATABASE_URL!,
   },
 });
