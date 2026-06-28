@@ -29,8 +29,15 @@ export default function AddTrackedView() {
     return () => clearTimeout(t);
   }, [input]);
 
-  // Reset highlight on new results
-  useEffect(() => { setHighlighted(-1); }, [search]);
+  // Reset highlight on new results.
+  // Adjusted during render (not in an effect) — this is the React-recommended
+  // pattern for "reset state when another piece of state changes":
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const [prevSearch, setPrevSearch] = useState(search);
+  if (search !== prevSearch) {
+    setPrevSearch(search);
+    setHighlighted(-1);
+  }
 
   // Close on outside click
   useEffect(() => {
@@ -186,6 +193,7 @@ export default function AddTrackedView() {
                   type="search"
                   role="combobox"
                   aria-expanded={open}
+                  aria-controls="product-search-listbox"
                   aria-autocomplete="list"
                   aria-haspopup="listbox"
                   placeholder="ابحث عن منتج بالاسم أو الباركود..."
@@ -200,6 +208,7 @@ export default function AddTrackedView() {
                 {/* Dropdown */}
                 {open && input && (
                   <div
+                    id="product-search-listbox"
                     role="listbox"
                     aria-label="نتائج البحث"
                     className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border border-ink-200 bg-white shadow-xl animate-fade-in dark:border-ink-700 dark:bg-ink-800"

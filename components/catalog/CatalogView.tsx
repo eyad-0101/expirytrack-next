@@ -10,11 +10,11 @@ export default function CatalogView() {
   const ref = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const [input, setInput]           = useState("");
-  const [search, setSearch]         = useState("");
-  const [open, setOpen]             = useState(false);
+  const [input, setInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
   const [highlighted, setHighlighted] = useState(-1);
-  const [selected, setSelected]     = useState<Product | null>(null);
+  const [selected, setSelected] = useState<Product | null>(null);
 
   // Debounce
   useEffect(() => {
@@ -22,13 +22,21 @@ export default function CatalogView() {
     return () => clearTimeout(t);
   }, [input]);
 
-  // Reset highlight when results change
-  useEffect(() => { setHighlighted(-1); }, [search]);
+  // Reset highlight when results change.
+  // Adjusted during render (not in an effect) — React-recommended pattern
+  // for "reset state when another piece of state changes":
+  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const [prevSearch, setPrevSearch] = useState(search);
+  if (search !== prevSearch) {
+    setPrevSearch(search);
+    setHighlighted(-1);
+  }
 
   // Close on outside click
   useEffect(() => {
     function handle(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
     }
     document.addEventListener("mousedown", handle);
     return () => document.removeEventListener("mousedown", handle);
@@ -91,8 +99,12 @@ export default function CatalogView() {
     <div className="space-y-5">
       {/* Header */}
       <div>
-        <h1 className="text-xl font-bold text-ink-900 sm:text-2xl dark:text-ink-100">الكتالوج</h1>
-        <p className="mt-1 text-sm text-ink-500 dark:text-ink-400">تصفح المنتجات المتاحة للمتابعة</p>
+        <h1 className="text-xl font-bold text-ink-900 sm:text-2xl dark:text-ink-100">
+          الكتالوج
+        </h1>
+        <p className="mt-1 text-sm text-ink-500 dark:text-ink-400">
+          تصفح المنتجات المتاحة للمتابعة
+        </p>
       </div>
 
       {/* Search with dropdown */}
@@ -108,7 +120,12 @@ export default function CatalogView() {
         {input && (
           <button
             type="button"
-            onClick={() => { setInput(""); setOpen(false); setSelected(null); inputRef.current?.focus(); }}
+            onClick={() => {
+              setInput("");
+              setOpen(false);
+              setSelected(null);
+              inputRef.current?.focus();
+            }}
             className="absolute inset-y-0 end-8 flex items-center px-1 text-ink-400 hover:text-ink-700 dark:hover:text-ink-200 z-10"
             aria-label="مسح البحث"
           >
@@ -121,12 +138,18 @@ export default function CatalogView() {
           type="search"
           role="combobox"
           aria-expanded={open}
+          aria-controls="catalog-search-listbox"
           aria-autocomplete="list"
           aria-haspopup="listbox"
           placeholder="ابحث بالاسم أو الباركود..."
           value={input}
-          onChange={(e) => { setInput(e.target.value); setOpen(true); }}
-          onFocus={() => { if (input) setOpen(true); }}
+          onChange={(e) => {
+            setInput(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => {
+            if (input) setOpen(true);
+          }}
           onKeyDown={onKeyDown}
           autoComplete="off"
           className="w-full rounded-lg border border-ink-200 bg-white py-2.5 pe-16 ps-4 text-sm text-ink-900 placeholder:text-ink-400 transition-all focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-ink-600 dark:bg-ink-800 dark:text-ink-100 dark:placeholder:text-ink-500 dark:focus:border-brand-400"
@@ -135,6 +158,7 @@ export default function CatalogView() {
         {/* Dropdown */}
         {open && input && (
           <div
+            id="catalog-search-listbox"
             role="listbox"
             className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border border-ink-200 bg-white shadow-xl animate-fade-in dark:border-ink-700 dark:bg-ink-800"
           >
@@ -142,9 +166,12 @@ export default function CatalogView() {
             {!isLoading && products.length > 0 && (
               <div className="flex items-center justify-between border-b border-ink-100 px-4 py-2 dark:border-ink-700">
                 <span className="text-xs text-ink-400 dark:text-ink-500">
-                  {products.length} نتيجة{products.length === 50 ? " (الأولى 50)" : ""}
+                  {products.length} نتيجة
+                  {products.length === 50 ? " (الأولى 50)" : ""}
                 </span>
-                <span className="text-xs text-ink-400 dark:text-ink-500">↑↓ للتنقل · Enter للاختيار</span>
+                <span className="text-xs text-ink-400 dark:text-ink-500">
+                  ↑↓ للتنقل · Enter للاختيار
+                </span>
               </div>
             )}
 
@@ -152,7 +179,10 @@ export default function CatalogView() {
               {isLoading ? (
                 <div className="space-y-1 p-2">
                   {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center gap-3 rounded-lg p-3">
+                    <div
+                      key={i}
+                      className="flex items-center gap-3 rounded-lg p-3"
+                    >
                       <div className="h-8 w-8 shrink-0 rounded-md skeleton" />
                       <div className="flex-1 space-y-1.5">
                         <div className="h-3.5 w-2/3 skeleton" />
@@ -164,8 +194,12 @@ export default function CatalogView() {
               ) : products.length === 0 ? (
                 <div className="flex flex-col items-center justify-center px-4 py-8 text-center">
                   <Package className="mb-2 h-8 w-8 text-ink-300 dark:text-ink-600" />
-                  <p className="text-sm font-medium text-ink-700 dark:text-ink-300">لا توجد نتائج</p>
-                  <p className="mt-0.5 text-xs text-ink-400 dark:text-ink-500">جرّب بحثًا مختلفًا</p>
+                  <p className="text-sm font-medium text-ink-700 dark:text-ink-300">
+                    لا توجد نتائج
+                  </p>
+                  <p className="mt-0.5 text-xs text-ink-400 dark:text-ink-500">
+                    جرّب بحثًا مختلفًا
+                  </p>
                 </div>
               ) : (
                 <div className="divide-y divide-ink-50 dark:divide-ink-700/50">
@@ -183,10 +217,16 @@ export default function CatalogView() {
                           : "hover:bg-ink-50 dark:hover:bg-ink-700/50"
                       }`}
                     >
-                      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors ${
-                        highlighted === i ? "bg-brand-100 dark:bg-brand-800" : "bg-ink-100 dark:bg-ink-700"
-                      }`}>
-                        <Package className={`h-4 w-4 ${highlighted === i ? "text-brand-600 dark:text-brand-400" : "text-ink-500 dark:text-ink-400"}`} />
+                      <div
+                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors ${
+                          highlighted === i
+                            ? "bg-brand-100 dark:bg-brand-800"
+                            : "bg-ink-100 dark:bg-ink-700"
+                        }`}
+                      >
+                        <Package
+                          className={`h-4 w-4 ${highlighted === i ? "text-brand-600 dark:text-brand-400" : "text-ink-500 dark:text-ink-400"}`}
+                        />
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-ink-900 dark:text-ink-100">
@@ -217,8 +257,12 @@ export default function CatalogView() {
                 <Package className="h-5 w-5 text-brand-600 dark:text-brand-400" />
               </div>
               <div>
-                <p className="font-semibold text-brand-900 dark:text-brand-100">{selected.name}</p>
-                <p className="font-mono text-xs text-brand-600 dark:text-brand-400">{selected.barcode}</p>
+                <p className="font-semibold text-brand-900 dark:text-brand-100">
+                  {selected.name}
+                </p>
+                <p className="font-mono text-xs text-brand-600 dark:text-brand-400">
+                  {selected.barcode}
+                </p>
                 <p className="mt-1 text-sm font-bold text-brand-700 dark:text-brand-300">
                   {Number(selected.price).toFixed(2)} ج.م
                 </p>
@@ -231,14 +275,14 @@ export default function CatalogView() {
             >
               <X className="h-4 w-4" />
             </button>
+            <a
+              href="/add"
+              className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              أضف هذا المنتج للمتابعة
+            </a>
           </div>
-          <a
-            href="/add"
-            className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            أضف هذا المنتج للمتابعة
-          </a>
         </div>
       )}
 
@@ -248,8 +292,12 @@ export default function CatalogView() {
           <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-ink-100 dark:bg-ink-700">
             <Search className="h-6 w-6 text-ink-300 dark:text-ink-500" />
           </div>
-          <p className="text-sm font-medium text-ink-700 dark:text-ink-300">ابحث عن منتج</p>
-          <p className="mt-1 text-xs text-ink-400 dark:text-ink-500">اكتب الاسم أو الباركود في حقل البحث أعلاه</p>
+          <p className="text-sm font-medium text-ink-700 dark:text-ink-300">
+            ابحث عن منتج
+          </p>
+          <p className="mt-1 text-xs text-ink-400 dark:text-ink-500">
+            اكتب الاسم أو الباركود في حقل البحث أعلاه
+          </p>
         </div>
       )}
     </div>
