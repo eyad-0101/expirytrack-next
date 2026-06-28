@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-import { listTracked, deleteTracked, type TrackedItem } from "@/lib/api-client";
+import { listTracked, deleteTracked, getMe, type TrackedItem } from "@/lib/api-client";
 import { statusOf, fmtDate, fmtDaysLabel, diffDays, STATUS_META } from "@/lib/expiry";
 
 /* ── SwipeableCard — mobile swipe-to-delete ─────────────────── */
@@ -43,7 +43,8 @@ function SwipeableCard({
 
   const onTouchMove = useCallback((e: React.TouchEvent) => {
     if (!isDragging.current) return;
-    const dx = startX.current - e.touches[0].clientX;
+    // RTL: swipe LEFT-to-RIGHT reveals the delete button on the right
+    const dx = e.touches[0].clientX - startX.current;
     // Clamp: allow up to SWIPE_SNAP, resist beyond that
     const clamped = Math.min(Math.max(0, dx), SWIPE_SNAP + 20);
     swipeXRef.current = clamped;
@@ -75,9 +76,9 @@ function SwipeableCard({
 
   return (
     <div className="relative overflow-hidden rounded-xl">
-      {/* Delete action underneath the card */}
+      {/* Delete action underneath the card — on the RIGHT for RTL */}
       <div
-        className={`absolute inset-y-0 left-0 flex items-center justify-end rounded-xl transition-all duration-200 ${
+        className={`absolute inset-y-0 right-0 flex items-center justify-start rounded-xl transition-all duration-200 ${
           open ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         style={{ width: SWIPE_SNAP }}
@@ -113,10 +114,10 @@ function SwipeableCard({
         }}
         className="relative rounded-xl bg-white shadow-sm transition-[transform,box_shadow] duration-200 ease-out dark:bg-ink-800"
         style={{
-          transform: `translateX(-${swipeX}px)`,
+          transform: `translateX(${swipeX}px)`,
           // Slight shadow increase as card slides
           boxShadow: swipeX > 0
-            ? `-${Math.min(swipeX, 8)}px 0 16px -4px rgba(0,0,0,0.08)`
+            ? `${Math.min(swipeX, 8)}px 0 16px -4px rgba(0,0,0,0.08)`
             : undefined,
           touchAction: "pan-y",
           userSelect: "none",
@@ -125,10 +126,10 @@ function SwipeableCard({
         {children}
       </div>
 
-      {/* Subtle hint on first render — a tiny peek of red on the left edge */}
+      {/* Subtle hint on first render — a tiny peek of red on the right edge (RTL) */}
       {!open && swipeX === 0 && (
         <div
-          className="pointer-events-none absolute inset-y-2 left-0 w-1 rounded-full bg-red-400/30"
+          className="pointer-events-none absolute inset-y-2 right-0 w-1 rounded-full bg-red-400/30"
           aria-hidden="true"
         />
       )}
@@ -142,6 +143,12 @@ export default function DashboardView() {
   const qc = useQueryClient();
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
+
+  const { data: me } = useQuery({
+    queryKey: ["me"],
+    queryFn: getMe,
+  });
+  const isAdmin = me?.role === "admin";
 
   const { data: items = [], isLoading } = useQuery<TrackedItem[]>({
     queryKey: ["tracked"],
@@ -302,6 +309,12 @@ export default function DashboardView() {
                         {item.notes && (
                           <p className="mt-0.5 text-xs text-ink-400 line-clamp-1 dark:text-ink-500">{item.notes}</p>
                         )}
+                        {isAdmin && item.userEmail && (
+                          <p className="mt-1 flex items-center gap-1 text-[11px] text-ink-400 dark:text-ink-500">
+                            <span>👤</span>
+                            <span className="truncate">{item.userEmail}</span>
+                          </p>
+                        )}
                       </div>
                       <span
                         className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-semibold badge-${status}`}
@@ -360,6 +373,9 @@ export default function DashboardView() {
                     <th className="px-4 py-3 font-semibold text-ink-700 dark:text-ink-300">المتبقي</th>
                     <th className="px-4 py-3 font-semibold text-ink-700 dark:text-ink-300">الكمية</th>
                     <th className="px-4 py-3 font-semibold text-ink-700 dark:text-ink-300">الحالة</th>
+                    {isAdmin && (
+                      <th className="px-4 py-3 font-semibold text-ink-700 dark:text-ink-300">أضافه</th>
+                    )}
                     <th className="px-4 py-3"></th>
                   </tr>
                 </thead>
@@ -391,6 +407,13 @@ export default function DashboardView() {
                             {meta.label}
                           </span>
                         </td>
+                        {isAdmin && (
+                          <td className="px-4 py-3 text-xs text-ink-500 dark:text-ink-400 max-w-[140px]">
+                            <span className="truncate block" title={item.userEmail ?? ""}>
+                              {item.userEmail ?? "—"}
+                            </span>
+                          </td>
+                        )}
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1">
                             {/* Progress bar */}
