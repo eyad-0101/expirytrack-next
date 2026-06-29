@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, X, Check, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, Search, ScanBarcode } from "lucide-react";
 
 import { createProduct, deleteProduct, updateProduct, listProducts, type Product } from "@/lib/api-client";
+import { BarcodeScanner } from "@/components/BarcodeScanner";
 
 type EditState = { barcode: string; name: string; price: string };
 
@@ -18,6 +19,8 @@ export default function AdminCatalogView() {
   const [editData, setEditData] = useState<EditState>({ barcode: "", name: "", price: "" });
   const [input, setInput] = useState("");
   const [search, setSearch] = useState("");
+  const [showScanner, setShowScanner] = useState(false);         // ← new
+  const [scanTarget, setScanTarget] = useState<"form" | "edit">("form"); // ← new
 
   useEffect(() => {
     const t = setTimeout(() => setSearch(input), 300);
@@ -28,6 +31,23 @@ export default function AdminCatalogView() {
     queryKey: ["products", search],
     queryFn: () => listProducts({ search, limit: 1000 }),
   });
+
+  // ── Barcode detected ───────────────────────────────────────
+  const handleBarcode = (code: string) => {
+    setShowScanner(false);
+    if (scanTarget === "form") {
+      setFormData((prev) => ({ ...prev, barcode: code }));
+      toast.success("تم مسح الباركود");
+    } else {
+      setEditData((prev) => ({ ...prev, barcode: code }));
+      toast.success("تم مسح الباركود");
+    }
+  };
+
+  const openScanner = (target: "form" | "edit") => {
+    setScanTarget(target);
+    setShowScanner(true);
+  };
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -79,6 +99,14 @@ export default function AdminCatalogView() {
 
   return (
     <div className="space-y-6">
+      {/* Scanner overlay */}
+      {showScanner && (
+        <BarcodeScanner
+          onDetected={handleBarcode}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -101,14 +129,26 @@ export default function AdminCatalogView() {
           <div className="space-y-4">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-ink-900 dark:text-ink-200">الباركود</label>
-              <input
-                type="text"
-                value={formData.barcode}
-                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                className={inputClass}
-                placeholder="6900000000000"
-                required
-              />
+              {/* ── Barcode input + scan button ── */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={formData.barcode}
+                  onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                  className={inputClass}
+                  placeholder="6900000000000"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => openScanner("form")}
+                  aria-label="مسح الباركود"
+                  title="مسح الباركود بالكاميرا"
+                  className="flex items-center justify-center rounded-lg border border-ink-200 bg-white px-3 text-ink-500 transition-all hover:border-brand-400 hover:bg-brand-50 hover:text-brand-600 active:scale-95 dark:border-ink-600 dark:bg-ink-800 dark:text-ink-400 dark:hover:border-brand-500 dark:hover:bg-brand-900/30 dark:hover:text-brand-400"
+                >
+                  <ScanBarcode className="h-4 w-4" />
+                </button>
+              </div>
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium text-ink-900 dark:text-ink-200">الاسم</label>
@@ -197,11 +237,23 @@ export default function AdminCatalogView() {
                           />
                         </td>
                         <td className="px-4 py-2">
-                          <input
-                            value={editData.barcode}
-                            onChange={(e) => setEditData({ ...editData, barcode: e.target.value })}
-                            className={inputClass + " font-mono"}
-                          />
+                          {/* ── Barcode input + scan button in edit row ── */}
+                          <div className="flex gap-2">
+                            <input
+                              value={editData.barcode}
+                              onChange={(e) => setEditData({ ...editData, barcode: e.target.value })}
+                              className={inputClass + " font-mono"}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => openScanner("edit")}
+                              aria-label="مسح الباركود"
+                              title="مسح الباركود بالكاميرا"
+                              className="flex items-center justify-center rounded-lg border border-ink-200 bg-white px-2 text-ink-500 transition-all hover:border-brand-400 hover:bg-brand-50 hover:text-brand-600 active:scale-95 dark:border-ink-600 dark:bg-ink-800 dark:text-ink-400 dark:hover:border-brand-500 dark:hover:bg-brand-900/30 dark:hover:text-brand-400"
+                            >
+                              <ScanBarcode className="h-4 w-4" />
+                            </button>
+                          </div>
                         </td>
                         <td className="px-4 py-2">
                           <input
