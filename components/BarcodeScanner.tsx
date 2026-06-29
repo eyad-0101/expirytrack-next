@@ -25,9 +25,8 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
 
         const devices = await BrowserMultiFormatReader.listVideoInputDevices();
         const backCamera =
-          devices.find((d) =>
-            /back|rear|environment/i.test(d.label)
-          ) ?? devices[0];
+          devices.find((d) => /back|rear|environment/i.test(d.label)) ??
+          devices[0];
 
         if (!backCamera) {
           setError("لم يتم العثور على كاميرا");
@@ -41,6 +40,7 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
             if (result && !detectedRef.current) {
               detectedRef.current = true;
               BrowserMultiFormatReader.releaseAllStreams();
+              alert("SCANNED: " + result.getText()); // 👈 debug line
               onDetected(result.getText());
             }
             if (err && !(err instanceof NotFoundException)) {
@@ -53,7 +53,7 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
         setError(
           name === "NotAllowedError"
             ? "يرجى السماح بالوصول إلى الكاميرا"
-            : "تعذّر تشغيل الكاميرا"
+            : "تعذّر تشغيل الكاميرا",
         );
       }
     };
