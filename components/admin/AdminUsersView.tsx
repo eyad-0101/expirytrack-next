@@ -82,10 +82,7 @@ export default function AdminUsersView() {
                             )}
                           </div>
                         </div>
-                        <div className="flex flex-col">
-                          <span className="font-medium text-ink-900 dark:text-ink-100">{user.name || "بدون اسم"}</span>
-                          <span className="text-xs text-ink-500 dark:text-ink-400">{user.email}</span>
-                        </div>
+                        <span className="font-medium text-ink-900 dark:text-ink-100">{user.email}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3">

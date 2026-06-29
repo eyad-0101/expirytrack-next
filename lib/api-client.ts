@@ -48,8 +48,8 @@ export const deleteTracked   = (id: number) =>
   apiFetch<void>(`/api/tracked/${id}`, { method: "DELETE" });
 
 // ---- Users ----
-export type DbUser = { id: number; email: string; name: string | null; role: string; clerkUserId: string | null };
-export const getMe           = () => apiFetch<{ id: number; email: string; name: string | null; role: string }>("/api/me");
+export type DbUser = { id: number; email: string; role: string; clerkUserId: string | null };
+export const getMe           = () => apiFetch<{ id: number; email: string; role: string }>("/api/me");
 export const listUsers       = () => apiFetch<DbUser[]>("/api/users");
 export const updateUser      = (id: number, data: { email?: string; role?: string }) =>
   apiFetch<DbUser>(`/api/users/${id}`, { method: "PATCH", body: JSON.stringify(data) });

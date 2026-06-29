@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth";
 import { db, trackedItemsTable, productsTable, usersTable } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { clerkClient } from "@clerk/nextjs/server";
 
 const CreateTrackedBody = z.object({
   productId: z.number(),
@@ -25,13 +26,37 @@ export async function GET() {
       .leftJoin(usersTable, eq(trackedItemsTable.clerkUserId, usersTable.clerkUserId))
       .orderBy(trackedItemsTable.expiryDate);
 
+    // Fetch user names from Clerk
+    const clerkUserIds = [...new Set(rows.map(r => r.tracked_items.clerkUserId).filter(Boolean))];
+    const clerkUsers: Record<string, { fullName: string | null; firstName: string | null; username: string | null }> = {};
+
+    if (clerkUserIds.length > 0) {
+      try {
+        const client = await clerkClient();
+        for (const userId of clerkUserIds) {
+          const user = await client.users.getUser(userId);
+          clerkUsers[userId] = {
+            fullName: user.fullName,
+            firstName: user.firstName,
+            username: user.username,
+          };
+        }
+      } catch (error) {
+        console.error("Failed to fetch Clerk users:", error);
+      }
+    }
+
     return NextResponse.json(
-      rows.map(({ tracked_items, products, users }) => ({
-        ...tracked_items,
-        userEmail: users?.email ?? undefined,
-        userName: users?.name ?? undefined,
-        product: { ...products, price: Number(products.price) },
-      }))
+      rows.map(({ tracked_items, products, users }) => {
+        const clerkUser = tracked_items.clerkUserId ? clerkUsers[tracked_items.clerkUserId] : null;
+        const userName = clerkUser?.fullName || clerkUser?.firstName || clerkUser?.username;
+        return {
+          ...tracked_items,
+          userEmail: users?.email ?? undefined,
+          userName: userName ?? undefined,
+          product: { ...products, price: Number(products.price) },
+        };
+      })
     );
   }
 
