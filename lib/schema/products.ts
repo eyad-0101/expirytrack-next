@@ -9,6 +9,13 @@ export const productsTable = mysqlTable("products", {
   price:   decimal("price", { precision: 10, scale: 2 }).notNull(),
 });
 
-export const insertProductSchema = createInsertSchema(productsTable).omit({ id: true });
+// drizzle-zod models MySQL DECIMAL as a string; however the UI may send `price` as a number.
+// Coerce numbers to strings so POST/PATCH behave consistently.
+export const insertProductSchema = createInsertSchema(productsTable)
+  .omit({ id: true })
+  .extend({
+    price: z.coerce.number().transform((v) => String(v)),
+  });
+
 export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type Product = typeof productsTable.$inferSelect;
