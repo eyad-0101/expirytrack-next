@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -15,158 +15,6 @@ import Link from "next/link";
 
 import { listTracked, deleteTracked, getMe, type TrackedItem } from "@/lib/api-client";
 import { statusOf, fmtDate, fmtDaysLabel, diffDays, STATUS_META } from "@/lib/expiry";
-
-/* ── SwipeableCard — mobile swipe-to-delete ─────────────────── */
-// RTL: user swipes right-to-left (finger moves left).
-// Card slides LEFT revealing the red delete button on the left edge.
-// IMPORTANT: uses native addEventListener with passive:false so
-// e.preventDefault() actually works (React touch handlers are passive).
-const SWIPE_THRESHOLD = 72;
-const SWIPE_SNAP = 88;
-
-function SwipeableCard({
-  children,
-  onDelete,
-  isDeleting,
-}: {
-  children: React.ReactNode;
-  onDelete: () => void;
-  isDeleting: boolean;
-}) {
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [swipeX, setSwipeX] = useState(0);
-  const [open, setOpen] = useState(false);
-
-  // All mutable gesture state in refs — never causes re-render mid-gesture
-  const startX = useRef(0);
-  const startY = useRef(0);
-  const axis = useRef<"h" | "v" | null>(null);
-  const liveX = useRef(0);
-  const isOpen = useRef(false); // mirror of `open` accessible inside native listeners
-
-  // Keep isOpen ref in sync
-  useEffect(() => { isOpen.current = open; }, [open]);
-
-  const snapBack = useCallback(() => {
-    liveX.current = 0;
-    setSwipeX(0);
-    setOpen(false);
-    isOpen.current = false;
-  }, []);
-
-  const handleDelete = useCallback(() => {
-    if (confirm("هل تريد حذف هذا العنصر؟")) {
-      onDelete();
-      snapBack();
-    }
-  }, [onDelete, snapBack]);
-
-  // Attach native (non-passive) listeners so preventDefault works
-  useEffect(() => {
-    const el = cardRef.current;
-    if (!el) return;
-
-    const onStart = (e: TouchEvent) => {
-      startX.current = e.touches[0].clientX;
-      startY.current = e.touches[0].clientY;
-      axis.current = null;
-      liveX.current = isOpen.current ? SWIPE_SNAP : 0;
-      // Disable transition during drag
-      el.style.transition = "none";
-    };
-
-    const onMove = (e: TouchEvent) => {
-      const dx = startX.current - e.touches[0].clientX; // +ve = finger moved left
-      const dy = Math.abs(e.touches[0].clientY - startY.current);
-
-      if (!axis.current) {
-        if (Math.abs(dx) < 5 && dy < 5) return;
-        axis.current = Math.abs(dx) > dy ? "h" : "v";
-      }
-      if (axis.current === "v") return;
-
-      e.preventDefault(); // works because listener is non-passive
-      const base = isOpen.current ? SWIPE_SNAP : 0;
-      const clamped = Math.min(Math.max(0, base + dx), SWIPE_SNAP + 24);
-      liveX.current = clamped;
-      // Directly mutate the DOM for zero-lag tracking
-      el.style.transform = `translateX(-${clamped}px)`;
-      setSwipeX(clamped); // keep React state in sync for button visibility
-    };
-
-    const onEnd = () => {
-      el.style.transition = "transform 0.2s ease, box-shadow 0.2s ease";
-      if (liveX.current >= SWIPE_THRESHOLD) {
-        liveX.current = SWIPE_SNAP;
-        el.style.transform = `translateX(-${SWIPE_SNAP}px)`;
-        setSwipeX(SWIPE_SNAP);
-        setOpen(true);
-        isOpen.current = true;
-      } else {
-        liveX.current = 0;
-        el.style.transform = "translateX(0)";
-        setSwipeX(0);
-        setOpen(false);
-        isOpen.current = false;
-      }
-    };
-
-    el.addEventListener("touchstart", onStart, { passive: true });
-    el.addEventListener("touchmove",  onMove,  { passive: false }); // non-passive!
-    el.addEventListener("touchend",   onEnd,   { passive: true });
-
-    return () => {
-      el.removeEventListener("touchstart", onStart);
-      el.removeEventListener("touchmove",  onMove);
-      el.removeEventListener("touchend",   onEnd);
-    };
-  }, []); // empty — all state accessed via refs
-
-  return (
-    <div className="relative rounded-xl" style={{ overflow: "hidden" }}>
-      {/* Delete button — left edge (end-side in RTL), always mounted */}
-      <div
-        className="absolute inset-y-0 left-0 flex items-center justify-center rounded-xl bg-red-600"
-        style={{ width: SWIPE_SNAP }}
-      >
-        <button
-          onClick={handleDelete}
-          disabled={isDeleting}
-          aria-label="حذف"
-          className="flex h-full w-full items-center justify-center gap-1.5 text-sm font-semibold text-white disabled:opacity-50"
-        >
-          {isDeleting ? (
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-          ) : (
-            <>
-              <Trash2 className="h-4 w-4" />
-              حذف
-            </>
-          )}
-        </button>
-      </div>
-
-      {/* Card — slides left to reveal button; touch handlers attached via useEffect */}
-      <div
-        ref={cardRef}
-        onClick={open ? snapBack : undefined}
-        onKeyDown={(e) => { if (e.key === "Escape") snapBack(); }}
-        role="button"
-        tabIndex={0}
-        className="relative rounded-xl bg-white dark:bg-ink-800"
-        style={{
-          transform: "translateX(0)",
-          transition: "transform 0.2s ease, box-shadow 0.2s ease",
-          boxShadow: swipeX > 0 ? "0 2px 12px rgba(0,0,0,0.10)" : undefined,
-          userSelect: "none",
-          willChange: "transform",
-        }}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
 
 type Filter = "all" | "expired" | "soon" | "warning" | "ok";
 
@@ -328,67 +176,76 @@ export default function DashboardView() {
               const meta = STATUS_META[status];
               const days = diffDays(item.expiryDate);
               return (
-                <SwipeableCard
+                <div
                   key={item.id}
-                  onDelete={() => deleteMutation.mutate(item.id)}
-                  isDeleting={deleteMutation.isPending}
+                  className="rounded-xl border border-ink-200 bg-white p-4 shadow-sm dark:border-ink-700 dark:bg-ink-800"
                 >
-                  <div className="rounded-xl border border-ink-200 bg-white p-4 shadow-sm dark:border-ink-700 dark:bg-ink-800">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-ink-900 dark:text-ink-100">{item.product.name}</p>
-                        {item.notes && (
-                          <p className="mt-0.5 text-xs text-ink-400 line-clamp-1 dark:text-ink-500">{item.notes}</p>
-                        )}
-                        {isAdmin && item.userEmail && (
-                          <p className="mt-1 flex items-center gap-1 text-[11px] text-ink-400 dark:text-ink-500">
-                            <span>👤</span>
-                            <span className="truncate">{item.userEmail}</span>
-                          </p>
-                        )}
-                      </div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-ink-900 dark:text-ink-100">{item.product.name}</p>
+                      {item.notes && (
+                        <p className="mt-0.5 text-xs text-ink-400 line-clamp-1 dark:text-ink-500">{item.notes}</p>
+                      )}
+                      {isAdmin && item.userEmail && (
+                        <p className="mt-1 flex items-center gap-1 text-[11px] text-ink-400 dark:text-ink-500">
+                          <span>👤</span>
+                          <span className="truncate">{item.userEmail}</span>
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
                       <span
-                        className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-semibold badge-${status}`}
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold badge-${status}`}
                       >
                         {meta.label}
                       </span>
-                    </div>
-                    <div className="mt-3 grid grid-cols-3 gap-2 rounded-lg bg-ink-50/50 p-3 text-sm dark:bg-ink-700/50">
-                      <div>
-                        <p className="text-[11px] text-ink-400 dark:text-ink-500">تاريخ الانتهاء</p>
-                        <p className="font-medium text-ink-700 dark:text-ink-200">{fmtDate(item.expiryDate)}</p>
-                      </div>
-                      <div>
-                        <p className="text-[11px] text-ink-400 dark:text-ink-500">المتبقي</p>
-                        <p className={`font-semibold ${meta.text}`}>{fmtDaysLabel(days)}</p>
-                      </div>
-                      <div>
-                        <p className="text-[11px] text-ink-400 dark:text-ink-500">الكمية</p>
-                        <p className="font-medium text-ink-700 dark:text-ink-200">{item.quantity}</p>
-                      </div>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between">
-                      <div className="flex-1 ml-3">
-                        <div className="progress-track">
-                          <div
-                            className={`progress-fill ${meta.bar}`}
-                            style={{
-                              width: `${
-                                status === "expired"
-                                  ? 100
-                                  : status === "soon"
-                                    ? 75
-                                    : status === "warning"
-                                      ? 40
-                                      : 10
-                              }%`,
-                            }}
-                          />
-                        </div>
-                      </div>
+                      <button
+                        onClick={() => handleDelete(item)}
+                        disabled={deleteMutation.isPending}
+                        aria-label={`حذف ${item.product.name}`}
+                        className="rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:text-ink-500 dark:hover:bg-red-950 dark:hover:text-red-400"
+                      >
+                        {deleteMutation.isPending ? (
+                          <span className="block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
+                        )}
+                      </button>
                     </div>
                   </div>
-                </SwipeableCard>
+                  <div className="mt-3 grid grid-cols-3 gap-2 rounded-lg bg-ink-50/50 p-3 text-sm dark:bg-ink-700/50">
+                    <div>
+                      <p className="text-[11px] text-ink-400 dark:text-ink-500">تاريخ الانتهاء</p>
+                      <p className="font-medium text-ink-700 dark:text-ink-200">{fmtDate(item.expiryDate)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-ink-400 dark:text-ink-500">المتبقي</p>
+                      <p className={`font-semibold ${meta.text}`}>{fmtDaysLabel(days)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[11px] text-ink-400 dark:text-ink-500">الكمية</p>
+                      <p className="font-medium text-ink-700 dark:text-ink-200">{item.quantity}</p>
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <div className="progress-track">
+                      <div
+                        className={`progress-fill ${meta.bar}`}
+                        style={{
+                          width: `${
+                            status === "expired"
+                              ? 100
+                              : status === "soon"
+                                ? 75
+                                : status === "warning"
+                                  ? 40
+                                  : 10
+                          }%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
               );
             })}
           </div>
@@ -470,7 +327,7 @@ export default function DashboardView() {
                               onClick={() => handleDelete(item)}
                               disabled={deleteMutation.isPending}
                               aria-label={`حذف ${item.product.name}`}
-                              className="invisible rounded-lg p-1.5 text-ink-400 opacity-0 transition-all hover:bg-red-50 hover:text-red-600 group-hover:visible group-hover:opacity-100 disabled:opacity-50 dark:text-ink-500 dark:hover:bg-red-950 dark:hover:text-red-400"
+                              className="rounded-lg p-1.5 text-ink-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:text-ink-500 dark:hover:bg-red-950 dark:hover:text-red-400"
                             >
                               <Trash2 className="h-4 w-4" aria-hidden="true" />
                             </button>
