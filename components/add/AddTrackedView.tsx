@@ -4,9 +4,10 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Search, X, Package } from "lucide-react";
+import { Search, X, Package, ScanBarcode } from "lucide-react";
 
 import { listProducts, createTracked, type Product } from "@/lib/api-client";
+import { BarcodeScanner } from "@/components/BarcodeScanner";
 
 export default function AddTrackedView() {
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function AddTrackedView() {
   const [expiryDate, setExpiryDate]   = useState("");
   const [quantity, setQuantity]       = useState("1");
   const [notes, setNotes]             = useState("");
+  const [showScanner, setShowScanner] = useState(false); // ← new
 
   // Debounce search
   useEffect(() => {
@@ -29,10 +31,6 @@ export default function AddTrackedView() {
     return () => clearTimeout(t);
   }, [input]);
 
-  // Reset highlight on new results.
-  // Adjusted during render (not in an effect) — this is the React-recommended
-  // pattern for "reset state when another piece of state changes":
-  // https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
   const [prevSearch, setPrevSearch] = useState(search);
   if (search !== prevSearch) {
     setPrevSearch(search);
@@ -70,6 +68,29 @@ export default function AddTrackedView() {
     setTimeout(() => inputRef.current?.focus(), 50);
   }, []);
 
+  // ── Barcode detected → search by barcode text ──────────────
+  const handleBarcode = useCallback(async (code: string) => {
+    setShowScanner(false);
+    toast.loading("جاري البحث عن المنتج...", { id: "barcode-search" });
+    try {
+      const results = await listProducts({ search: code, limit: 5 });
+      toast.dismiss("barcode-search");
+      if (results.length > 0) {
+        selectProduct(results[0]);
+        toast.success(`تم العثور على: ${results[0].name}`);
+      } else {
+        // No match — pre-fill the search input so user can search manually
+        setInput(code);
+        setOpen(true);
+        setTimeout(() => inputRef.current?.focus(), 50);
+        toast.error("لم يُعثر على المنتج، يمكنك البحث يدويًا");
+      }
+    } catch {
+      toast.dismiss("barcode-search");
+      toast.error("فشل البحث، حاول مجددًا");
+    }
+  }, [selectProduct]);
+
   // Keyboard navigation
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (!open || products.length === 0) return;
@@ -87,7 +108,6 @@ export default function AddTrackedView() {
     }
   };
 
-  // Highlight matched text
   function highlight(text: string, query: string) {
     if (!query) return <>{text}</>;
     const idx = text.toLowerCase().indexOf(query.toLowerCase());
@@ -123,6 +143,14 @@ export default function AddTrackedView() {
 
   return (
     <div className="space-y-5">
+      {/* Barcode scanner overlay */}
+      {showScanner && (
+        <BarcodeScanner
+          onDetected={handleBarcode}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
+
       {/* Header */}
       <div>
         <h1 className="text-xl font-bold text-ink-900 sm:text-2xl dark:text-ink-100">إضافة عنصر للمتابعة</h1>
@@ -142,7 +170,6 @@ export default function AddTrackedView() {
             </label>
 
             {selectedProduct ? (
-              /* ── Selected chip ── */
               <div className="flex items-center justify-between rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 dark:border-brand-700 dark:bg-brand-900/30">
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-100 dark:bg-brand-800">
@@ -166,44 +193,58 @@ export default function AddTrackedView() {
                 </button>
               </div>
             ) : (
-              /* ── Search input + dropdown ── */
               <div ref={dropdownRef} className="relative">
-                {/* Icons */}
-                <div className="pointer-events-none absolute inset-y-0 end-3 flex items-center z-10">
-                  {isLoading && input ? (
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600" />
-                  ) : (
-                    <Search className="h-4 w-4 text-ink-400" />
-                  )}
-                </div>
-                {input && (
+                {/* ── Search input row with scan button ── */}
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    {/* trailing icons inside input */}
+                    <div className="pointer-events-none absolute inset-y-0 end-3 flex items-center z-10">
+                      {isLoading && input ? (
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600" />
+                      ) : (
+                        <Search className="h-4 w-4 text-ink-400" />
+                      )}
+                    </div>
+                    {input && (
+                      <button
+                        type="button"
+                        onClick={() => { setInput(""); setOpen(false); inputRef.current?.focus(); }}
+                        className="absolute inset-y-0 end-8 flex items-center px-1 text-ink-400 hover:text-ink-700 dark:hover:text-ink-200 z-10"
+                        aria-label="مسح"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                    <input
+                      ref={inputRef}
+                      id="product-search"
+                      type="search"
+                      role="combobox"
+                      aria-expanded={open}
+                      aria-controls="product-search-listbox"
+                      aria-autocomplete="list"
+                      aria-haspopup="listbox"
+                      placeholder="ابحث عن منتج بالاسم أو الباركود..."
+                      value={input}
+                      onChange={(e) => { setInput(e.target.value); setOpen(true); }}
+                      onFocus={() => { if (input) setOpen(true); }}
+                      onKeyDown={onKeyDown}
+                      autoComplete="off"
+                      className="w-full rounded-xl border border-ink-200 bg-white py-2.5 pe-16 ps-4 text-sm text-ink-900 placeholder:text-ink-400 transition-all focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-ink-600 dark:bg-ink-800 dark:text-ink-100 dark:placeholder:text-ink-500 dark:focus:border-brand-400"
+                    />
+                  </div>
+
+                  {/* ── Scan button ── */}
                   <button
                     type="button"
-                    onClick={() => { setInput(""); setOpen(false); inputRef.current?.focus(); }}
-                    className="absolute inset-y-0 end-8 flex items-center px-1 text-ink-400 hover:text-ink-700 dark:hover:text-ink-200 z-10"
-                    aria-label="مسح"
+                    onClick={() => setShowScanner(true)}
+                    aria-label="مسح الباركود بالكاميرا"
+                    title="مسح الباركود"
+                    className="flex items-center justify-center rounded-xl border border-ink-200 bg-white px-3 text-ink-500 transition-all hover:border-brand-400 hover:bg-brand-50 hover:text-brand-600 active:scale-95 dark:border-ink-600 dark:bg-ink-800 dark:text-ink-400 dark:hover:border-brand-500 dark:hover:bg-brand-900/30 dark:hover:text-brand-400"
                   >
-                    <X className="h-3.5 w-3.5" />
+                    <ScanBarcode className="h-5 w-5" />
                   </button>
-                )}
-
-                <input
-                  ref={inputRef}
-                  id="product-search"
-                  type="search"
-                  role="combobox"
-                  aria-expanded={open}
-                  aria-controls="product-search-listbox"
-                  aria-autocomplete="list"
-                  aria-haspopup="listbox"
-                  placeholder="ابحث عن منتج بالاسم أو الباركود..."
-                  value={input}
-                  onChange={(e) => { setInput(e.target.value); setOpen(true); }}
-                  onFocus={() => { if (input) setOpen(true); }}
-                  onKeyDown={onKeyDown}
-                  autoComplete="off"
-                  className="w-full rounded-xl border border-ink-200 bg-white py-2.5 pe-16 ps-4 text-sm text-ink-900 placeholder:text-ink-400 transition-all focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-ink-600 dark:bg-ink-800 dark:text-ink-100 dark:placeholder:text-ink-500 dark:focus:border-brand-400"
-                />
+                </div>
 
                 {/* Dropdown */}
                 {open && input && (
@@ -213,7 +254,6 @@ export default function AddTrackedView() {
                     aria-label="نتائج البحث"
                     className="absolute z-20 mt-1 w-full overflow-hidden rounded-xl border border-ink-200 bg-white shadow-xl animate-fade-in dark:border-ink-700 dark:bg-ink-800"
                   >
-                    {/* Header row */}
                     {!isLoading && products.length > 0 && (
                       <div className="flex items-center justify-between border-b border-ink-100 px-4 py-2 dark:border-ink-700">
                         <span className="text-xs text-ink-400 dark:text-ink-500">
