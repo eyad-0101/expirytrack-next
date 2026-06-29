@@ -186,10 +186,10 @@ export default function DashboardView() {
                       {item.notes && (
                         <p className="mt-0.5 text-xs text-ink-400 line-clamp-1 dark:text-ink-500">{item.notes}</p>
                       )}
-                      {isAdmin && item.userEmail && (
+                      {isAdmin && (item.userName || item.userEmail) && (
                         <p className="mt-1 flex items-center gap-1 text-[11px] text-ink-400 dark:text-ink-500">
                           <span>👤</span>
-                          <span className="truncate">{item.userEmail}</span>
+                          <span className="truncate">{item.userName || item.userEmail}</span>
                         </p>
                       )}
                     </div>
@@ -295,13 +295,13 @@ export default function DashboardView() {
                             {meta.label}
                           </span>
                         </td>
-                        {isAdmin && (
-                          <td className="px-4 py-3 text-xs text-ink-500 dark:text-ink-400 max-w-[140px]">
-                            <span className="truncate block" title={item.userEmail ?? ""}>
-                              {item.userEmail ?? "—"}
-                            </span>
-                          </td>
-                        )}
+	                        {isAdmin && (
+	                          <td className="px-4 py-3 text-xs text-ink-500 dark:text-ink-400 max-w-[140px]">
+	                            <span className="truncate block" title={item.userName || item.userEmail}>
+	                              {item.userName || item.userEmail}
+	                            </span>
+	                          </td>
+	                        )}
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1">
                             {/* Progress bar */}

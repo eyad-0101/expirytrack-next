@@ -29,6 +29,7 @@ export async function GET() {
       rows.map(({ tracked_items, products, users }) => ({
         ...tracked_items,
         userEmail: users?.email ?? undefined,
+        userName: users?.name ?? undefined,
         product: { ...products, price: Number(products.price) },
       }))
     );

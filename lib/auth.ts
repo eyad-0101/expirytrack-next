@@ -34,14 +34,16 @@ export async function requireAuth(): Promise<
 
   if (existing[0]) return { dbUser: existing[0] };
 
-  // 2. Resolve email from Clerk
+  // 2. Resolve email and name from Clerk
   let email = `${userId}@unknown.com`;
+  let name: string | null = null;
   try {
     const client = await clerkClient();
     const clerkUser = await client.users.getUser(userId);
     email = clerkUser.emailAddresses[0]?.emailAddress ?? email;
+    name = clerkUser.fullName || clerkUser.firstName || clerkUser.username || null;
   } catch {
-    // fall through with placeholder email
+    // fall through with placeholder values
   }
 
   // 3. Email already in DB (e.g. created by admin before first sign-in)
@@ -55,7 +57,7 @@ export async function requireAuth(): Promise<
     // MySQL has no RETURNING clause — update, then re-select the row.
     await db
       .update(usersTable)
-      .set({ clerkUserId: userId })
+      .set({ clerkUserId: userId, name })
       .where(eq(usersTable.id, byEmail[0].id));
 
     const [updated] = await db
@@ -75,7 +77,7 @@ export async function requireAuth(): Promise<
   // MySQL inserts only give back the inserted id via $returningId(), not the full row.
   const [{ id: newId }] = await db
     .insert(usersTable)
-    .values({ email, clerkUserId: userId, role })
+    .values({ email, clerkUserId: userId, name, role })
     .$returningId();
 
   const [created] = await db
