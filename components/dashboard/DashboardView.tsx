@@ -68,10 +68,10 @@ export default function DashboardView() {
     borderActive: string;
     ringActive: string;
   }[] = [
-    { key: "expired", label: "منتهي الصلاحية", icon: AlertTriangle, color: "text-red-600", borderActive: "border-red-500", ringActive: "ring-2 ring-red-500/30" },
-    { key: "soon",    label: "ينتهي قريبًا",   icon: Clock,          color: "text-orange-600", borderActive: "border-orange-500", ringActive: "ring-2 ring-orange-500/30" },
-    { key: "warning", label: "تحذير",           icon: CalendarCheck,  color: "text-amber-700", borderActive: "border-amber-500", ringActive: "ring-2 ring-amber-500/30" },
-    { key: "ok",      label: "جيد",             icon: CheckCircle,    color: "text-brand-600", borderActive: "border-brand-500", ringActive: "ring-2 ring-brand-500/30" },
+    { key: "expired", label: "منتهي الصلاحية",      icon: AlertTriangle, color: "text-red-600",    borderActive: "border-red-500",    ringActive: "ring-2 ring-red-500/30"    },
+    { key: "soon",    label: "ينتهي قريبًا (شهر)", icon: Clock,          color: "text-orange-600", borderActive: "border-orange-500", ringActive: "ring-2 ring-orange-500/30" },
+    { key: "warning", label: "تحذير (3 أشهر)",     icon: CalendarCheck,  color: "text-amber-700",  borderActive: "border-amber-500",  ringActive: "ring-2 ring-amber-500/30"  },
+    { key: "ok",      label: "جيد",                icon: CheckCircle,    color: "text-brand-600",  borderActive: "border-brand-500",  ringActive: "ring-2 ring-brand-500/30"  },
   ];
 
   const handleDelete = (item: TrackedItem) => {

@@ -9,9 +9,9 @@ export function diffDays(dateStr: string): number {
 
 export function statusOf(dateStr: string): ExpiryStatus {
   const d = diffDays(dateStr);
-  if (d < 0)  return "expired";
-  if (d <= 7)  return "soon";
-  if (d <= 30) return "warning";
+  if (d < 0)   return "expired";
+  if (d <= 30)  return "soon";
+  if (d <= 90) return "warning";
   return "ok";
 }
 
