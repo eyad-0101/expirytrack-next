@@ -40,7 +40,6 @@ export function BarcodeScanner({ onDetected, onClose }: BarcodeScannerProps) {
             if (result && !detectedRef.current) {
               detectedRef.current = true;
               BrowserMultiFormatReader.releaseAllStreams();
-              alert("SCANNED: " + result.getText()); // 👈 debug line
               onDetected(result.getText());
             }
             if (err && !(err instanceof NotFoundException)) {
