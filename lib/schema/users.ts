@@ -6,6 +6,7 @@ export const usersTable = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
   email:       varchar("email", { length: 255 }).notNull().unique(),
   clerkUserId: varchar("clerk_user_id", { length: 255 }).unique(),
+  username:    varchar("username", { length: 255 }),
   role:        varchar("role", { length: 20 }).notNull().$default(() => "user"),
 });
 

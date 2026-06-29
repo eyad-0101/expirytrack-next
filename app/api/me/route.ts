@@ -11,5 +11,5 @@ export async function GET() {
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, dbUser.id)).limit(1);
   if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  return NextResponse.json({ id: user.id, email: user.email, role: user.role });
+  return NextResponse.json({ id: user.id, email: user.email, role: user.role, username: user.username ?? null });
 }

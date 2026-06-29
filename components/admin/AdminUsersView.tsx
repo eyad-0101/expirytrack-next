@@ -62,6 +62,7 @@ export default function AdminUsersView() {
               <thead>
                 <tr className="border-b border-ink-200 bg-ink-50 dark:border-ink-700 dark:bg-ink-800/50">
                   <th className="px-4 py-3 font-semibold text-ink-700 dark:text-ink-300">المستخدم</th>
+                  <th className="px-4 py-3 font-semibold text-ink-700 dark:text-ink-300">اسم المستخدم</th>
                   <th className="px-4 py-3 font-semibold text-ink-700 dark:text-ink-300">الدور</th>
                   <th className="px-4 py-3"></th>
                 </tr>
@@ -84,6 +85,13 @@ export default function AdminUsersView() {
                         </div>
                         <span className="font-medium text-ink-900 dark:text-ink-100">{user.email}</span>
                       </div>
+                    </td>
+                    <td className="px-4 py-3 text-ink-600 dark:text-ink-300">
+                      {user.username ? (
+                        <span className="font-mono text-sm">@{user.username}</span>
+                      ) : (
+                        <span className="text-xs text-ink-400 dark:text-ink-500">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       {editingId === user.id ? (
